@@ -1,0 +1,58 @@
+---
+title: "INFO 370 Survey Report"
+author: "Swastik Singh"
+date: "2024-10-03"
+format: html
+---
+
+# Introduction
+
+This report presents the findings from the INFO 370 survey conducted in Autumn 2024. The survey aimed to gather insights on the misconceptions between the estimated number of undergraduate students versus the actual number of students.
+
+# Survey Methodology
+
+A survey between classmates. The convenience survey was conducted by walking around the classroom and asking 6 of my fellow classmates their guesses on the estimated number of undergraduate students versus the actual number of students. The survey was informal and aimed to gather quick insights. The responses were noted down manually to ensure accuracy. This method allowed for immediate feedback and interaction, providing a snapshot of the classmates' perspectives.
+
+# Results
+
+## Data Collection
+
+```{r}
+#| echo: false
+
+# Enter Measurements
+guess_students<- c(22000, 35000, 40000, 35000, 48000, 39000)
+actual_num = 33973
+
+# Convert into a data frame and store with a name
+survey_data <- data.frame(guesses_of_num_undergrads = guess_students, actual_num = actual_num, Difference = guess_students - actual_num)
+
+# Show data frame
+survey_data
+```
+
+## Key Findings
+
+I calculated summary statistics to give me a sense of the data.
+
+```{r}
+summary(survey_data)
+```
+The average preferred arrival time was around 4.7 minutes before the class start.
+
+
+# Conclusion
+
+Based on the survey data, my best guess for the average difference between the actual numbner of undergrads and guessed number of undergrads for UW students is 2527 people. While this could be
+correct, but I don't have much confidence.
+
+This study had a number of limitations:
+
+* I only collected a very small sample of data
+* I only collected data from students in an introductory informatics course
+* I only collected data from students who had already arrived in a class
+
+
+# References
+
+- Slides provided by the professor with the real count of UW undergrads

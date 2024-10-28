@@ -1,0 +1,457 @@
+---
+title: "INFO 370 Data Assignment 1: Interrogating Birth Data"
+author: "Swastik Singh"
+date: today
+format: 
+  html:
+    embed-resources: true
+---
+
+# Assignment Overview
+
+In this assignment, you will look at 2018 United States birth records, provided by the National Center for Vital Statistics. You will:
+
+* Conduct basic data wrangling with a moderately big data set
+* Create visualizations for core data visualization types
+* Contextualize the data in descriptions, causal understanding, and prediction tasks
+* Consider some ethical issues involved in using public health data collected by the government
+
+Before you complete this assignment. You must check out the data use restrictions listed [here](https://wonder.cdc.gov/natality-current.html
+). Once you have read those restrictions and agreed to them, then fill in your name below.
+
+:::{.callout-note}
+I, Swastik Singh, agree to abide by the data use restrictions associated with the CDC's natality and birth records data sets.
+:::
+
+To complete this assignment, you will need to write code or text for each of the exercises below. Make sure to work from top to bottom to complete the assignment. For specific R code issues, feel free to consult outside resources, in particular the R4DS textbook chapters on [data transformation](https://r4ds.hadley.nz/data-transform) and [data visualization](https://r4ds.hadley.nz/data-visualize).
+
+:::{.callout-warning}
+Making inferences or forming predictions about newborn birth weight (and other features in pregnancy and birth) is complex, and an area of intense research in many different disciplines. Nothing you are able to see in this data given our current skills in this class is sufficient to form reasonable, justified beliefs about health.
+:::
+
+# The Data Setup
+
+The following sections of the report set up the environment for you to create visualizations.
+
+## Load Libraries
+
+Set up the libraries required for visualizations.
+
+```{r}
+#If you get an error saying tidyverse has not been found, then you have not
+#installed it yet! To install them, "uncomment" the next line by deleting the
+#hash/pound symbol and try again! After you've installed, make sure to put
+#the hash/pound symbol back; Quarto doesn't like rendering documents if you
+#have installation lines.
+
+#install.packages("tidyverse")
+library(tidyverse)
+```
+
+## Load Data
+
+To load the data, make sure you saved the .Rdata file in the same location as this Quarto file.
+
+```{r}
+load("births2018.Rdata")
+```
+
+Have a look at the variables recorded in this dataset. Each row represents one live childbirth and features of the parents and pregnancy that led to it.
+
+```{r}
+glimpse(births)
+```
+
+### Data Dictionary
+
+This data set includes a lot of features about US births (and this is already trimmed from the full US natality data set available online). This document won't go into too many details, but a lot more can be found at the website for the [National Center for Health Statistics](https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm). Here are some features to consider in particular:
+
+* dbwt - the weight of a live newborn in grams
+* bwtr4 - this is a categorical label that describes if a newborn is described as "low birth weight" (less than 2,500 grams) or "very low birth weight" (less than 1,500 grams). [This article](https://www.childrenshospital.org/conditions/low-birthweight-newborns) published by the Boston Children's hospital describes these categories and some reasons why physicians and parents may be interested in them.
+* preterm - this is a designation of whether or not a newborn is a "premie" or born before the normative 37 week cutoff for "normal" pregnancy length. [Here](https://www.mayoclinic.org/diseases-conditions/premature-birth/symptoms-causes/syc-20376730) is some information on why physicians and parents might be concerned about preterm status of newborns.
+* wic - a recording of whether of not a mother was enrolled in the US federal government's Special Supplemental Nutrition Program for Women, Infants, and Children (usually called WIC, said like "wick"). This is a program that offers healthcare and nutrition assistance to low-income, pregnant and breastfeeding women.
+* cig_rec - a label that loosely describes if a mother consumed tobacco cigarettes during pregnancy. This collapses over frequency and doesn't distinguish between early and later pregnancy
+* dplural - this describes if a newborn was single or a member of a set of twins, triplets, quadruplets, etc.
+* sex - the sex determination made for a newborn, typically based on morphological or anatomical features of a newborn. Note that the NCHS only records female or male as options. Physicians or parents make a determination to choose a category for each newborn -- this is a complicated and contentious process, and especially so in cases where infants are intersex
+
+## Cleaning the Data
+
+### Exercise 1: Filter the data (1 pt)
+
+Filter the data so that it only includes cases of single newborns, excluding twins, triplets, etc. Save over the births data frame with the result and glimpse the resulting data.
+
+```{r}
+birth <- births %>% filter(dplural == "Single")
+glimpse(birth)
+```
+
+### Exercise 2: Select relevant features (1 pt)
+
+Trim down the births data frame so that it includes only features to consider later. Specifically, include only dbwt, wic, cig_rec, preterm, bwtr4, and sex. Save over the births data frame with the result. Glimpse the resulting data frame.
+
+```{r}
+birth <- birth %>% select(dbwt, wic, cig_rec, preterm, bwtr4, sex)
+glimpse(birth)
+```
+
+### Exercise 3: Create a new feature (.25)
+
+Add a new feature to the data frame that displays the weight of newborns in pounds rather than in grams. Name that new feature 'dbwt_lb'. Note that a gram is 0.00220462 pounds. Glimpse the resulting data frame.
+
+```{r}
+birth <- birth %>% mutate(dbwt_lb = dbwt * 0.00220462)
+glimpse(birth)
+
+```
+
+### Drop missing data
+
+Remove rows from out dataset for births were there is missing values. In other words, drop rows where some column includes NA as an answer. This step is already completed.
+
+```{r}
+# Drop rows with missing data
+birth <- birth %>% drop_na()
+
+```
+
+Note that as a result of dropping some missing data, this data set does not include all the single, live births in 2018, but there still are a *lot* of them. This data cleaning step is questionable, but makes some visualizations easier.
+
+### Data Check-Point
+
+If you're unsure about having completed Exercises 1-3 correctly, you can uncomment the code below to load a "clean" version of the data that you can use for the following exercises. Make sure you hav ethe .Rdata file saved in the same folder as your quarto file.
+
+```{r}
+# load("births2018_cleaned.Rdata")
+```
+
+
+# Data Interpretation Exercises
+
+In each of the following exercise (4-8), you'll create a visualization, calculate some summary statistics, and interpret the data in description, causal understanding, and prediction contexts. Create the visualizations as closely as closely as possible the one in the example file on the assignment web page and calculate the same summary statistics as shown there as well. For the interpretation questions, *delete* the question text and replace it with your response (which should be 1 - 3 sentences each).
+
+## Exercise 4: Birthweights
+
+Start by checking out the distribution of birthweights (in pounds) of single, newborns in 2018.
+
+### 4A: Visualize the data (2 pts) 
+
+```{r}
+print(paste("The peak is around:", median(birth$dbwt_lb, na.rm = TRUE)))
+ggplot(birth, aes(x = dbwt_lb)) +
+  geom_histogram(binwidth = 0.5, fill = "gray", color = "black") +
+  labs(title = "Distribution of Birthweights (in pounds) of Single Newborns in 2018",
+       x = "Birthweight (lbs)",
+       y = "Counts") +
+  theme_minimal()
+
+```
+
+### 4B: Summarize the data (1 pt)
+
+```{r}
+birth_summary <- birth %>%
+  summarize(
+    mean_weight = mean(dbwt_lb, na.rm = TRUE),
+    sd = sd(dbwt_lb, na.rm = TRUE),
+    n = n()
+  )
+
+birth_summary
+
+```
+
+### 4C: Interpret the data (1-2 sentences each; 2 pts total)
+
+* Description: What is a typical birth weight for single newborns in the US? What is the biggest and smallest weights that you would consider "typical" based on the graph and why?
+
+> * A typical birth weight for single newborns in the US is around 7.26 pounds, as indicated by the mean weight. Based on the graph, the biggest and smallest weights that would be considered "typical" are approximately 6.02 pounds to 8.5 pounds. This range captures the majority of the distribution, excluding the tails where the weights are less common.
+
+* Causal Understanding: At its most basic, why would this visualization be unhelpful in gaining a causal understanding around birth weight?
+
+> * This visualization is unhelpful in gaining a causal understanding around birth weight because it only shows the distribution of birth weights without accounting for other potential confounding variables that might influence birth weight. It does not provide any insight into the underlying factors or mechanisms that cause variations in birth weight.
+
+* Prediction: In this data set, the mean (average) length of pregnancy was 7.26 pounds. If you were to predict the weight of every live newborn as 7.26 pounds, what percent of the time do you think that you would be within 0.5 pounds of the true weight? What do you base this on?
+
+> * If I predicted every newborn’s weight as 7.26 pounds, I would be within 0.5 pounds of the true weight about 31.38% of the time. This is based on the assumption that the weights follow a normal distribution with a mean of 7.26 pounds and a standard deviation of 1.24 pounds. I based this on calculating the Z-scores for 6.76 pounds and 7.76 pounds (which are 0.5 pounds below and above the mean, respectively).
+
+```{r}
+# Done with reference to my notes from Stat 311
+sd = sd(birth$dbwt_lb, na.rm = TRUE)
+z1 <- -0.5 / sd # 0.5 lbs below mean
+z2 <- 0.5 / sd # 0.5 lbs above mean
+
+p1 <- pnorm(z1) # Probability of being below z1
+p2 <- pnorm(z2) # Probability of being below z2
+
+percentage <- (p2 - p1) * 100 # calculate in between p1 & p2
+percentage
+
+```
+
+
+## Exercise 5: Birthweights and Recorded Sex
+
+Split the distribution of newborn weights up by the recorded sex of the newborn and interpret what you see.
+
+### 5A: Visualize the data (2 pts)
+
+```{r}
+# Plot for male-recorded newborns
+ggplot(birth %>% filter(sex == "Male"), aes(x = dbwt_lb)) +
+  geom_histogram(binwidth = 0.5, fill = "blue", color = "black") +
+  labs(title = "Distribution of Birthweights of Male-Recorded Single Newborns in 2018",
+       x = "Birthweight (lbs)",
+       y = "Counts") +
+  theme_minimal()
+
+# Plot for female-recorded newborns
+ggplot(birth %>% filter(sex == "Female"), aes(x = dbwt_lb)) +
+  geom_histogram(binwidth = 0.5, fill = "pink", color = "black") +
+  labs(title = "Distribution of Birthweights of Female-Recorded Single Newborns in 2018",
+       x = "Birthweight (lbs)",
+       y = "Counts") +
+  theme_minimal()
+
+print("The male newborns are heavier than the female newborns.")
+
+```
+
+### 5B: Summarize the data (1 pt)
+
+```{r}
+birth_summary_sex <- birth %>%
+  group_by(sex) %>%
+  summarize(
+    mean_weight = mean(dbwt_lb, na.rm = TRUE),
+    sd = sd(dbwt_lb, na.rm = TRUE),
+    n = n()
+  )
+
+birth_summary_sex
+
+```
+
+### 5C: Interpret the data (1-2 sentences each; 2 pts total)
+
+* Description: What is a good description of the difference in distribution of weights for male- and female-recorded newborns?
+
+> * The distribution of weights for male newborns is slightly higher compared to female newborns. This is visually evident from the histograms where the peak of the distribution for male newborns is to the right compared to female newborns. Also, male newborns show a slightly wider spread in weights, showing more variability.
+
+* Causal Understanding: Without further knowledge or assumptions, this data could be consistent with a world in which the weight of a newborn influences the recording of sex, with a world in which the sex of a newborn directly (or fetus beforehand) influences its weight, or a world in which neither sex nor weight directly influence each other. Write two single sentence stories that could produce the pattern seen (and potentially setting aside pre-existing understanding of biological development or sex determinations at birth).
+
+> * One possible story is that heavier newborns are more likely to be recorded as male due to societal biases in recording practices.
+> * Another possible story is that male fetuses tend to develop at a faster rate, leading to higher birth weights compared to female fetuses.
+
+* Prediction: There is a difference in typical weights based on recorded sex in this dataset. How well do you think you can predict the recorded gender of a newborn based on its weight?
+
+> * Given the overlap in the distributions of birth weights for male and female newborns, predicting the recorded gender based solely on weight wouldn't be highly accurate. While there is a slight difference in the mean weights, the variability within each group is large enough that weight alone is not a strong indecator of gender. Therefore, the prediction accuracy would likely be only slightly better than random guessing.
+
+
+## Exercise 6: Birthweights and Smoking in Pregnancy
+
+Cigarette smoking during pregnancy is a issue that has been of great interest in the biomedical research world -- and at times a source of guilt and stigma for pregnant women. Have a look at the distribution of newborn weights for mothers who did and did not report smoking during pregnancy.
+
+Hint for visualization: Check how to remove outliers from boxplots.
+
+### 6A: Visualize the data (2 pts)
+
+```{r}
+ggplot(birth, aes(x = cig_rec, y = dbwt_lb, fill = cig_rec)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(title = "Distribution of Newborn Weights by Maternal Smoking Status",
+       x = "Maternal Smoking Status",
+       y = "Birthweight (lbs)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+print("Median smoker (mother) babies are lighter than median non-smoker (mother) babies")
+
+```
+
+### 6B: Summarize the data (1 pt)
+
+```{r}
+birth_summary_smoking <- birth %>%
+  group_by(cig_rec) %>%
+  summarize(
+    mean_weight = mean(dbwt_lb, na.rm = TRUE),
+    sd = sd(dbwt_lb, na.rm = TRUE),
+    n = n()
+  )
+
+birth_summary_smoking
+
+```
+
+### 6C: Interpreting the data (1-3 sentences each; 2 pts total):
+
+* Description: How does the pattern of newborn weights differ for those whose mothers were smokers compared to those whose mothers were nonsmokers?
+
+> * The pattern of newborn weights shows that infants born to mothers who smoked during pregnancy tend to have lower birth weights compared to those born to non-smoking mothers. This is evident from the boxplot where the median birth weight for the smoking group is lower, and the IQR is also shifted downwards compared to the nonsmoking group.
+
+* Causal Understanding: What are two different causal stories or explanations for this pattern of data? In particular, consider at least one story where smoking does not lead to lower birthweight, but which is consistent with the data. Which story is more likely based on your prior knowledge?
+
+> * One possible explanation is that smoking during pregnancy directly leads to lower birth weights due to the harmful effects of tobacco on fetal development.
+
+> * Another explanation could be that mothers who smoke during pregnancy might have other underlying health or socioeconomic factors that contribute to lower birth weights, such as poor nutrition or limited access to prenatal care. In this case, smoking itself might not be the direct cause of lower birth weights, but rather a correlated behavior with other risk factors.
+
+> * Based on my prior knowledge, the first story where smoking directly leads to lower birth weights is more likely.
+
+* Prediction: Based just on the smoking habits of mothers, how well do you think you could predict the weight of newborn infants? In other words, are the children of women who smoked in pregnancy always small? Consider the range of weights for both groups.
+
+> * While there is a noticeable trend that children of mothers who smoked during pregnancy tend to have lower birth weights, the range of weights for both groups overlaps significantly. This means that not all children of smoking mothers are small, and there are possibility of higher birth weights in this group as well. Therefore, smoking habits alone would not be a highly reliable predictor of newborn weight, and therefore other contributing factors need to be considered.
+
+
+## Exercise 7: Birthweights and Food Assistance
+
+In the US, the Special Supplemental Nutrition Program for Women, Infants, and Children (or [WIC](https://www.fns.usda.gov/wic)) is one of the most widespread welfare programs offered by the federal government. Almost 7 million people used WIC in 2018. One of the stated goals of WIC is to enhance the health outcomes of mothers and children. One things you might think to do given this goal is to naively check out the distribution of newborn weights based on whether mothers used WIC or not. Check this out.
+
+Hint for visualization: Check how to remove outliers from boxplots.
+
+### 7A: Visualize the data (2 pts)
+
+```{r}
+ggplot(birth, aes(x = wic, y = dbwt_lb, fill = wic)) +
+  geom_boxplot(outlier.shape = NA) +
+  labs(title = "Distribution of Newborn Weights by WIC Participation",
+       x = "WIC Participation",
+       y = "Birthweight (lbs)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+print("Median WIC babies are lighter than median non-WIC babies")
+
+```
+
+### 7B: Summarize the data (1 pt)
+
+```{r}
+birth_summary_wic <- birth %>%
+  group_by(wic) %>%
+  summarize(
+    mean_weight = mean(dbwt_lb, na.rm = TRUE),
+    sd = sd(dbwt_lb, na.rm = TRUE),
+    n = n()
+  )
+
+birth_summary_wic
+
+```
+
+### 7C: Interpreting the data (1-3 sentences each; 2 pts total):
+
+* Description: How does the pattern of newborn weights differ for those whose mothers were or were not in WIC?
+
+> * The pattern of newborn weights shows that infants born to mothers who participated in the WIC program tend to have lower birth weights compared to those born to non-participating mothers. This is evident from the boxplot where the median birth weight for the WIC group is lower, and the IQR is also shifted downwards compared to the non-WIC group.
+
+* Causal Understanding: This data on its own is not good evidence that the WIC program is bad for maternal or fetal health. Why not? What is an alternative story that accounts for the pattern?
+
+> * This data on its own is not good evidence that the WIC program is bad for maternal or fetal health because it does not account for other confounding variables that might influence birth weight, such as socioeconomic status, access to healthcare, or pre-existing health conditions of the mothers. An alternative story is that mothers who participate in WIC are more likely to come from lower-income backgrounds and might have other risk factors that contribute to lower birth weights, independent of their participation in the WIC program.
+
+* Prediction: This data isn't good evidence that WIC hinders maternal or fetal health, but does that mean that knowing if someone is using WIC would be useless in predicting the birth weight of their future newborn? Why or why not?
+
+> * Knowing if someone is using WIC would not be entirely useless in predicting the birth weight of their future newborn. While WIC participation alone is not a strong predictor, it can still provide some context about the socioeconomic status and potential risk factors of the mother, which might indirectly influence birth weight. Therefore, it could be one of several factors considered in a more comprehensive predictive model.
+
+
+## Exercise 8: Birthweight and premie status
+
+Many parents worry that having a premie -- or an infant born "early" is dangerous. Indeed, there is a lot of research looking into the risks of early and very early births. But one thing to consider is that early births are not *always* a cause for alarm. Let's consider how preterm birth relates in particular to low birth weight status. Recall that preterm is defined here as 37 weeks or earlier.
+
+Hint for visualization: Check how to create stacked barplots with *proportions*.
+
+### 8A: Visualize the data (2 pts)
+
+```{r}
+ggplot(birth, aes(x = preterm, fill = bwtr4)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Proportion of Low Birth Weight by Preterm Status",
+       x = "Preterm Status",
+       y = "Proportion",
+       fill = "Birth Weight Category") +
+  theme_minimal()
+
+```
+
+### 8B: Summarize the data (1 pt)
+
+```{r}
+birth_summary_preterm <- birth %>%
+  group_by(preterm, bwtr4) %>%
+  summarize(count = n()) %>%
+  mutate(proportion = count / sum(count))
+
+birth_summary_preterm
+
+```
+
+### 8C: Interpreting the data (1-2 sentences each; 2 pts total)::
+
+* Description: What is a good description of the difference in distributions of (very) low birth weight status for premature and non-premature newborns?
+
+> * The distribution shows that premature newborns have a significantly higher proportion of low and very low birth weights compared to non-premature newborns. This indicates that being born prematurely is strongly associated with lower birth weights.
+
+* Causal Understanding: What are two different causal stories or explanations that could help explain this pattern of data (you can set aside or stretch your understanding of biological development)? 
+
+> * One possible explanation is that premature birth directly causes lower birth weights because the newborns have had less time to grow and develop in the womb.
+
+> * Another explanation could be that underlying health issues or complications that lead to premature birth also contribute to lower birth weights, meaning both outcomes are caused by a third factor.
+
+* Prediction: If you wanted to use this data to build a model that predicts if a newborn will be low birth weight based solely on their premature status, what would the most likely prediction be for either case?
+
+> * The most likely prediction would be that premature newborns are more likely to be classified as low or very low birth weight, while non-premature newborns are more likely to have normal birth weights. This is based on the observed higher proportion of low birth weights among premature newborns.
+
+
+# Reflection on Data Exploration
+
+In this assignment, you have looked at some very serious, real data that has been collected from literally millions of people. It is important to think about the potential uses and limitations of this kind of data in terms of describing, understanding, and predicting patterns and outcomes in newborn health (or importantly maternal health!). Additionally, it is crucial to think deeply about the provenance of specific data sets and the ethics of using them.
+
+The data set that you looked at is publicly available through the National Center for Vital Statistics, a part of the Centers for Disease Control (the CDC). This data set is intended to represent information about all births that occur in the US (in this case in 2018). The vast majority of births in the US are thought to be officially recorded and are detailed in this data set. 
+
+Having a birth record filed is crucial for many activities later in life, and is often necessary to demonstrate eligibility for US citizenship among other things. While most medical data requires consent to collect and share under US law, particularly under HIPAA (The Health Insurance Portability and Accountability Act), birth records are not officially considered protected health information, because they serve "vital" public health needs in the US.
+ 
+For every recorded live birth, US states (and their representatives at health institutions) record information in a form that looks like [this](https://www.cdc.gov/nchs/data/dvs/birth11-03final-ACC.pdf). These records include a lot of different entries, including some very sensitive things about the background and health of the newborn and their family! This information is sent to the federal government and collated to form the complete data set of live births for each year. You only looked at part of the data set, but the full data set includes literally hundreds of features describing each birth in the US. While the publicly accessible version of this data removes the location of births and names, it still includes features like the exact time of birth and more than enough information to re-identify individuals. Biomedical researchers working for the government or major institutions can sometimes gain access to versions of the data with locations and names intact.
+
+Versions of this data set (especially smaller subsets of it) are used commonly by data scientists and in textbooks and educational programs like this INFO course. Thousands of other students have looked at this data or similar versions of it. However, given all you know about birth records, you might want to consider whether it was actually *ethical* to use this data. Consider the three guiding ethical documents presented in class:
+
+* [The ASA Ethical Guidelines](https://www.amstat.org/your-career/ethical-guidelines-for-statistical-practice)
+* [The ACM Code of Ethics](https://www.acm.org/code-of-ethics)
+* [The Feminist Data Manifest-No](https://www.manifestno.com/home)
+
+In each of these documents, find at least one principle or statement that is related to *consent* when using human data. After finding each principle or statement, consider: Was it ethically problematic to complete this assignment in the framework that the document rests on? Note that there are gradient scales to what is or is not ethical -- you may decide that completing this assignment was not strictly-speaking ethical. Keep in mind that completing similar assignments (and working with similar data in industry and public service) is currently common-place, and that you yourself were under some amount of pressure to complete this assignment. The instructor is personally terrified of the use of such data sets, but feels that it is ultimately more ethical to ensure that students are aware of their existence and use.
+
+### Exercise 9 A: ASA Ethical Guidelines (2 pts)
+
+What is a statement related to consent in the ASA guidelines?
+
+* Principle D: "The ethical statistical practitioner does not misuse or condone the misuse of data. They protect and respect the rights and interests of human and animal subjects. These responsibilities extend to those who will be directly affected by statistical practices."
+
+Think about that statement and the context of the US birth record data. Is using this data ethically problematic based on your interpretation of this principle? How do you know? If your answer is "I don't know", what info would you need to determine this?
+
+* Using the US birth record data could be ethically problematic if proper consent or privacy safeguards were not followed. Based on this principle, it is essential to verify whether consent was obtained for secondary uses of the data and whether privacy protections, such as de-identification, were applied. If this information is missing, I would need to investigate how the data was collected and if individuals consented to their information being used for research.
+
+
+### Exercise 9 B: ACM Code of Ethics (2 pts)
+
+What is a statement related to consent in the ACM Code?
+
+* "1.6 Respect privacy"
+
+Think about that statement and the context of the US birth record data. Is using this data ethically problematic based on your interpretation of this principle? How do you know? If your answer is "I don't know", what info would you need to determine this?
+
+* The ACM's focus on respecting privacy aligns with concerns about how the US birth record data was collected and used. If the data subjects’ privacy was not respected—meaning if personal information was shared without proper consent—it would violate this principle. To determine if using this data is problematic, I would need to know if any privacy violations occurred and whether consent for data use was properly obtained.
+
+### Exercise 9 C: The Feminist Data Manifest-No (2 pts)
+
+What is a statement related to consent in the Manifest-No?
+
+* Number 15. "We refuse systems that simplify consent into a one-time action, a simple click of a yes to a terms of service agreement, to ownership of our data in perpetuity. We commit to enacting Planned Parenthood’s FRIES model of consent that ensures that it is always 'Freely given, Reversible, Informed, Enthusiastic and Specific.'"​
+
+Think about that statement and the context of the US birth record data. The manifest-no isn't really a list of principles per se, but a list of things that people refuse to do *based* on principles. If you sign on to the Manifest-No, is using the US births data ethically problematic?
+
+* If I sign on to the Manifest-No, using US birth data could be ethically problematic, especially if consent was obtained in a simplistic or coercive way. The Manifest-No emphasizes the need for "Freely given, Reversible, Informed, Enthusiastic, and Specific" consent, meaning that data should not be used indefinitely or without detailed and ongoing permission from the individuals involved.
+
+# That's all!
+
+When you have completed this assignment, make sure to render it as an html file. Check that the html file looks as you expect and upload the html report. If you do not complete the assignment and are unable to render the document, you can submit the .qmd for partial credit.
+

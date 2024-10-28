@@ -1,0 +1,552 @@
+---
+title: "INFO370 Data Assignment 2: Clinical Design Support"
+author: "Swastik Singh, Carson G Miller Rigoli"
+date: today - 10/28/2024
+format:
+  html:
+    embed-resources: true
+---
+
+# Analysis Summary
+
+In this document, we report on an analysis to estimate the impact of a clinical decision support system (CDS) that provides best-practice alerts (BPA) to medical providers when they order diagnostic scans for patients. In particular, we estimated the impact that this system has on reducing the number of inappropriate scan orders by providers. We additionally estimated potential impacts of the CDS on the number of patient encounters that providers experience and the proportion of providers that leave the healthcare system. These guardrails allowed us to check whether the CSD system prohibitively slows down care (and thus reduces number of patient encounters) or encourages providers to quit their jobs or retire due to extra administrative burden. Data from this analysis was sourced from a large scale randomized control trial conducted at the Aurora healthcare system in Wisconsin. All providers who did not choose to opt out of this experimental study were randomly assigned to have their scan ordering system updates to use the CDS and show BPAs (the treatment group of providers) or they continued using the standard scan ordering system (the control group).
+
+:::{.callout-note}
+Note: The version of the analysis conducted here does not include all of the controls and uses a slightly different set of success metrics than would be optimally used for real implementation of the analysis. Because of this, our results are slightly different from those found by the original authors. For a more comprehensive analysis of this study, check out ["Clinical decision support for high-cost imaging: A randomized clinical trial" by Doyle, Abraham, Feeny, Reimer, & Finkelstein.](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0213373).
+:::
+
+## Analysis Plan
+
+### Success Metrics
+
+::: {.column-margin}
+Exercise 1: Decide whether mean or median is more appropriate and justify the choice. Selection either **mean** or **median** and write about 1-2 sentences to justify the choice. Leave your text as bolded by leaving the ** marks around your text.
+:::
+
+The main success metric selected for this study was the reduction in **mean** number of targeted scan orders by providers. For this analysis, we chose to evaluate **mean** because **we thought that the reduction in scans should reflect all providers' behavior, accounting for variability in scan volumes across providers. The mean helps capture the overall impact on patients by averaging the scan orders, representing the total effect across the healthcare system.**.
+
+### Guardrail Metrics
+
+::: {.column-margin}
+Exercise 2: Decide whether mean or median is more appropriate and justify the choice.
+:::
+
+We additionally evaluated the impact of the clinical decision system on two guardrail metrics: proportion of providers who left the health system and reductions in **mean** number of patient encounters by providers. We chose to evaluate **mean** because **we aim to understand the overall impact on provider engagement across the system. Using the mean captures any broad changes in patient interactions, including cases where providers experience unusually high or low encounter volumes, to reflect system-wide effects."**.
+
+### Evaluating the randomization process
+
+In addition to estimating treatment effects for our success and guardrail metrics, we also checked that randomization was successful in eliminating pre-existing group-level differences between the treatment and control groups of providers. For this analysis, we checked for differences between the comparison groups in the number of years since providers graduated with their medical degrees and the proportion of providers that work in hospital emergency departments. Other potential confounding variables could have been analysed as well, but we limit the presentation of our analysis here to these two comparisons.
+
+# Setup the environment
+
+## Load libraries
+
+Data from the Aurora healtchcare system is provided in the form of a STATA ".dta" file. Base R does not include a function to easily load this type of file. However, the library called `haven` includes functions for loading many different types of data files. ".dta" files are commonly found for administrative and health data, and in industries that have a long history of conducting large statistical analyses using software like STATA. 
+
+::: {.column-margin}
+You may need to install `haven`. You can do this by uncommenting and running the install.packages() function. However, make sure you recomment before rendering the report!
+:::
+
+```{r}
+#install.packages("haven")
+library(haven)
+library(tidyverse)
+library(infer)
+```
+
+## Load data
+
+If you are unable to load the data, make sure that you set your working directory to the location of this file (in the Session dropdown in RStudio).
+
+```{r}
+provider<-read_dta("CDS_Data/prov_all_stats_sp.dta")
+```
+## Check out the data
+
+There were 3511 observations (providers) and 293 features in the data set.
+
+```{r}
+#| eval: false
+provider |>
+  glimpse()
+```
+
+# Data Preparation
+
+## Select only relevant features
+
+For this analysis, we focused only on 9 features of the data set. These features provide information related to:
+
+* Whether the provider is in treated group
+* The number targeted scans (in the full study period)
+* The QP (full quiet period) number targeted scans
+* The number encounters (in the full study period)
+* The QP (full quiet period) number encounters
+* Years since provider graduation with a medical degree
+* Whether the provider had most QP encounters in the ED (emergency department)
+* Whether the provider left health system in the study period
+* Whether the Provider left health system in the quiet period
+
+Information about these features can be found in the codebook (csd_codebook.pdf).
+
+::: {.column-margin}
+Exercise 3: Select only the relevant features and update the data frame. Double check your data analysis prep for the list of relevant features!
+:::
+
+```{r}
+# YOUR CODE HERE
+
+provider <- provider |>
+  select(treated,
+         scan_bpa_new,
+         scan_bpa_new_q,
+         encounter,
+         encounter_q,
+         provider_graduation_q,
+         most_enc_ed_q,
+         Iquit_sp,
+         Iquit_qp)
+
+provider |>
+  glimpse()
+```
+## Check data type
+
+For most purposes, 0 and 1 for binary variables are best treated as factors in R.
+
+::: {.column-margin}
+Exercise 4: Convert all binary (0/1) features to factors.
+
+Hint: An easy approach uses mutate() and factor().
+:::
+
+```{r}
+# YOUR CODE HERE
+
+provider <- provider |>
+  mutate(across(c(treated, most_enc_ed_q, Iquit_sp, Iquit_qp), factor))
+
+provider |> 
+  glimpse()
+```
+## Check for odd values
+
+In the data as provided, there are some odd data quirks.
+
+```{r}
+summary(provider)
+```
+
+In particular, note the values for years since provider graduation. In the provided codebook it is noted that missing values are listed as -9999. Also note that there are 125 providers who quit their jobs in the quiet period -- before the treatment was applied. In this analysis, we replace -9999 with a standardized missing data value (`NA`) and also remove providers who quit prior to the beginning of the study period.
+
+## Remove providers who quit before study period
+
+::: {.column-margin}
+Exercise 5:  Remove all providers who quit during the *quiet* period and update the data frame.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+provider <- provider |>
+  filter(Iquit_qp != 1)
+
+provider |>
+  group_by(Iquit_qp) |>
+  tally()
+```
+## Replace graduation missing values
+
+In order to calculate summary statistics for years since graduation, we replaced the -9999 filler values with NA.
+
+::: {.column-margin}
+Exercise 6:  Replace all the numerically coded missing values for years since graduation with `NAs`.
+
+Hint: Many ways to do this. In the tidyverse, you can use mutate() and na_if().
+:::
+
+```{r}
+# YOUR CODE HERE
+
+provider <- provider |>
+  mutate(provider_graduation_q = na_if(provider_graduation_q, -9999))
+
+provider |>
+  glimpse()
+```
+
+# Preprocessing
+
+For this analysis, our success metric (reduction in annualized number of targeted scans) and one guardrail metric (reduction in annualized number of patient encounters) are understood as individual change scores. In the original data set, values were provided for the quiet period and the study period, but a change score was not calculated. Additionally, the quiet period lasted 8 months prior to the treatment. The study period lasted 12 months. To make these periods comparable, we created an annualized version of the two quiet period features. Annualization here means that we report the values in terms of estimated totals per year (rather than the recorded total per 8 months). Seasonal effects mean that our annualized scores are somewhat biased, but we ignore that detail here (particularly as our interest is in comparing the change scores across conditions).
+
+### Annualize values
+
+We created annualized rate versions of the features necessary for our change scores.
+
+
+::: {.column-margin}
+Exercise 7: Create two new features in the provider data framed. `encounter_q_12m` should represent the total number of patient encounters that we believe a provider would encounter during a 12 month period (1 year) in the quiet period. You can do this by calculating a monthly rate of encounters (divide QP encounters by 8) and then multiply by 12 months.
+
+`scan_bpa_new_q_12m` should represent the total number of targeted scans that we believe a provider would order during a 12 month period (1 year) in the quiet period. You can do this by calculating a monthly rate of scans (divide QP scans by 8) and then multiply by 12 months.
+
+Hint: If a provider saw 3055 patients in the quiet period, then encounter_q_12m should be 4582.5.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+provider <- provider |>
+  mutate(encounter_q_12m = (encounter_q / 8) * 12,
+         scan_bpa_new_q_12m = (scan_bpa_new_q / 8) * 12)
+
+provider |>
+  glimpse()
+```
+
+### Calculate change score
+
+We calculated a change score for the number of targeted scans ordered by providers from the quiet period to the study period and a change score for the number of patient encounters that providers experienced from the quiet period to the study period.
+
+::: {.column-margin}
+Exercise 8: Create two new columns called `change_in_scans` and `change_in_encounters`. These should represent the increase in number of targeted scans that a provider ordered from the quiet period to the study period and the increase in the number of patient encounters for each provider.
+
+Hint: These should be positive if number of scans is bigger in the study period than in the quiet period. Use the annualized (_12m) score for the quiet period.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+provider <- provider |>
+  mutate(change_in_scans = scan_bpa_new - scan_bpa_new_q_12m,
+         change_in_encounters = encounter - encounter_q_12m)
+
+provider |> 
+  glimpse()
+```
+
+# Data Checkpoint
+
+::: {.column-margin}
+If you are unsure that you have prepped your data correctly, you can uncomment and run the code below to load a prepped version of the data frame to use in the remainder of the exercises.
+:::
+
+```{r}
+# load("providers_prepped.Rdata")
+```
+
+
+# Evaluation of Comparison Groups
+
+Providers enrolled in the research study were randomly assigned to adopt the CDS or not for the study period. As a randomized control trial, this study is designed to remove pre-existing differences between groups. However, randomization is only guaranteed to remove group differences on average. We checked to see if we have evidence that the comparison groups have differences in relevant features. 
+
+In all cases, we started with the null hypothesis that randomization has adequately eliminated group differences between the treatment and control comparison groups. We calculated confidence intervals for differences between the groups for several relevant features, and only considered differences between groups as problematic if we have achieved 95% confidence that a difference between the groups is present in general. Here, we will check differences between the treatment and control groups in the number of years since graduation and the proportion of providers who have worked primarily in emergency departments.
+
+## Years since graduation
+
+Both confidence as a practitioner and familiarity with clinical decision support systems (and electronic order systems generally) are reasonable potential moderators of the uptake of the best practice alerts made by the new CDS system. These features may both be captured to some degree by a proxy feature: length of time since a practitioner graduated with their medical degree. Here, we check that there is not evidence for significant differences in the mean number of years since graduation for the two comparison groups.
+
+::: {.column-margin}
+Exercise 9: Calculate a 95% confidence interval for the difference in mean years since graduation with a medical degree for the treated and untreated groups.
+
+Hint: Recall our Colab notebook, "INFO 370: Bootstrapping with infer" for confidence interval notes! For all confidence intervals that you calculate in this analysis, you can simply show the result. You don't need to save the results, as long as they are displayed in the report with the executed code.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+ci_grad <- provider |>
+  specify(response = provider_graduation_q, explanatory = treated) |>
+  generate(reps = 1000, type = "bootstrap") |>
+  calculate(stat = "diff in means", order = c("0", "1")) |>
+  get_confidence_interval(level = 0.95, type = "percentile")
+
+# Print the confidence interval
+print(ci_grad)
+
+point_estimate_grad <- provider |>
+  specify(response = provider_graduation_q, explanatory = treated) |>
+  calculate(stat = "diff in means", order = c("0", "1"))
+
+# Print the point estimate
+print(point_estimate_grad)
+```
+
+## Emergency Department Work
+
+Providers who work primarily in emergency departments may face different pressures and constraints in making judgments about diagnostic scan appropriateness than those working in non-emergency departments at hospitals or in out-patient clinics. Emergency department providers may be more willing to ignore CDS suggestions when working in more time-constrained and critical care scenarios. Here, we compare the proportion of providers who primarily worked in emergency care during the quiet period. Note that providers tend to work in both emergency and non-emergency departments, but we considered providers who had most of their patient encounters in an emergency department during the quiet period as "emergency department" providers for the purposes of this analysis.
+
+::: {.column-margin}
+Exercise 10: Calculate a 95% confidence interval for the difference in the proportion of providers who primarily worked in the emergency department of hospitals in the quiet period.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+ci_ed <- provider |>
+  specify(response = most_enc_ed_q, explanatory = treated, success = "1") |>
+  generate(reps = 1000, type = "bootstrap") |>
+  calculate(stat = "diff in props", order = c("0", "1")) |>
+  get_confidence_interval(level = 0.95, type = "percentile")
+
+# Print the confidence interval
+print(ci_ed)
+
+point_estimate_ed <- provider |>
+  specify(response = most_enc_ed_q, explanatory = treated, success = "1") |>
+  calculate(stat = "diff in props", order = c("0", "1"))
+
+# Print the point estimate
+print(point_estimate_ed)
+```
+
+# Check descriptive statistics
+
+Before calculating treatment effects, it is useful to get a sense of the scale of different features. For instance, what is a typical number of targeted scans to order? How many scans would need to be reduced to make an impact on that number? One scan per provider? One hundred scans per provider?. This information aids in later interpretation to give a sense of the size of potential effects and whether they may meaningfully impact patient outcomes at scale.
+
+## Descriptive statistics for the whole sample
+
+::: {.column-margin}
+Exercise 11: Calculate descriptive statistics for all providers as a group.
+
+Calculate the mean values for the total number of study period encounters, total number of study  period targeted scans, and the change in targeted scans. Also calculate the proportion of providers that quit their jobs in the quiet period and report the total number of providers.
+
+Hint: Use tidyverse/dplyr tools here. summary() does not include the total numbers. mean() can be used for proportions of TRUE and FALSE. You may want to use Iquit_sp == "1". Consider checking out the use of n() in dplyr. In practice, the sd and median would also be valuable, but this is all you need for the final conclusion questions.
+:::
+
+
+```{r}
+# YOUR CODE HERE
+
+provider |>
+  summarize(
+    mean_study_encounters = mean(encounter, na.rm = TRUE),
+    mean_study_scans = mean(scan_bpa_new, na.rm = TRUE),
+    mean_change_in_scans = mean(change_in_scans, na.rm = TRUE),
+    proportion_quit = mean(Iquit_sp == "1", na.rm = TRUE),
+    total_providers = n()
+  )
+```
+
+## Descriptive statistics for each comparison group
+
+::: {.column-margin}
+Exercise 12: Calculate descriptive statistics separately for providers in the two comparison groups. Calculate the same set of statistics as in the previous exercise.
+
+Hint: If you use tidyverse tools, you only need one extra line.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+provider |>
+  group_by(treated) |>
+  summarize(
+    mean_study_encounters = mean(encounter, na.rm = TRUE),
+    mean_study_scans = mean(scan_bpa_new, na.rm = TRUE),
+    mean_change_in_scans = mean(change_in_scans, na.rm = TRUE),
+    proportion_quit = mean(Iquit_sp == "1", na.rm = TRUE),
+    total_providers = n()
+  )
+```
+
+# Estimate treatment effects
+
+For our main analysis of the success metric and the two guardrail metrics, we estimated the relevant treatment effects using both point estimates and 95% confidence intervals.
+
+## Check Success Metric: Reduction in "inappropriate" scans
+
+### Point Estimate
+
+::: {.column-margin}
+Exercise 13: Calculate the point estimate for the relevant treatment effect.
+
+Hint: A point estimate is a *single number*. Recall your choice about the correct summary stat for the treatment effect! Either calculate the average (mean) treatment effect or the median treatment effect. You can use infer tools or other tools for this calculation, as long as it is correct and displayed. Double check the order of conditions.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+point_estimate_scans <- provider |>
+  specify(response = change_in_scans, explanatory = treated) |>
+  calculate(stat = "diff in means", order = c("0", "1"))
+
+# Print the point estimate
+print(point_estimate_scans)
+```
+### Range Estimate
+
+::: {.column-margin}
+Exercise 14: Calculate the 95% confidence interval for the relevant treatment effect.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+ci_scans <- provider |>
+  specify(response = change_in_scans, explanatory = treated) |>
+  generate(reps = 1000, type = "bootstrap") |>
+  calculate(stat = "diff in means", order = c("0", "1")) |>
+  get_confidence_interval(level = 0.95, type = "percentile")
+
+# Print the confidence interval
+print(ci_scans)
+
+```
+
+## Check Guardrail: Reduction in number of patient encounters
+
+
+### Point Estimate
+
+::: {.column-margin}
+Exercise 15: Calculate the point estimate for the relevant treatment effect.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+point_estimate_encounters <- provider |>
+  specify(response = change_in_encounters, explanatory = treated) |>
+  calculate(stat = "diff in means", order = c("0", "1"))
+
+# Print the point estimate
+print(point_estimate_encounters)
+```
+
+### Range Estimate
+
+::: {.column-margin}
+Exercise 16: Calculate the 95% confidence interval for the relevant treatment effect.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+ci_encounters <- provider |>
+  specify(response = change_in_encounters, explanatory = treated) |>
+  generate(reps = 1000, type = "bootstrap") |>
+  calculate(stat = "diff in means", order = c("0", "1")) |>
+  get_confidence_interval(level = 0.95, type = "percentile")
+
+# Print the confidence interval
+print(ci_encounters)
+
+```
+
+## Check Guardrail: Physicians leaving system
+
+### Point Estimate
+
+::: {.column-margin}
+Exercise 17: Calculate the point estimate for the proportional treatment effect.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+point_estimate_churn <- provider |>
+  specify(response = Iquit_sp, explanatory = treated, success = "1") |>
+  calculate(stat = "diff in props", order = c("0", "1"))
+
+# Print the point estimate
+print(point_estimate_churn)
+```
+
+### Range Estimate
+
+::: {.column-margin}
+Exercise 18: Calculate the 95% confidence interval for the proportional treatment effect.
+:::
+
+```{r}
+# YOUR CODE HERE
+
+ci_churn <- provider |>
+  specify(response = Iquit_sp, explanatory = treated, success = "1") |>
+  generate(reps = 1000, type = "bootstrap") |>
+  calculate(stat = "diff in props", order = c("0", "1")) |>
+  get_confidence_interval(level = 0.95, type = "percentile")
+
+# Print the confidence interval
+print(ci_churn)
+```
+# Conclusions
+
+## Evaluation of Comparison Groups
+
+::: {.column-margin}
+Exercise 19: Fill in the point estimates and confidence intervals below based on your analysis above. Then, select the type of validity that evaluating the comparison groups is intended to address. Do this by deleting the other options. Leave the **s to bold your choice.
+:::
+
+Our estimate for the difference in mean years since graduation for our two groups is **`r point_estimate_grad`**, 95% CI **[`r ci_grad$lower_ci`, `r ci_grad$upper_ci`]**. Our estimate for the difference in proportion of providers working in the emergency department is **`r point_estimate_ed`**, 95% CI **[`r ci_ed$lower_ci`, `r ci_ed$upper_ci`]**. Given that both of these confidence intervals include zero, we have not found evidence that our comparison groups are unbalanced in terms of these features. Because randomization should remove these differences on average, we work with the assumption that randomization functions well -- unless we can be confident that it has not based on our data. If we had found the two groups to be unbalanced, this would most directly be a threat to: 
+
+* **interval validity**
+* external validity
+* construct validity.
+
+
+## Guardrail Metric
+
+::: {.column-margin}
+Exercise 20: Put the correct valus for estimates in the text below. Then, select the interpretation from the options by deleting the other option.
+:::
+
+We estimated the **mean** treatment effect of the CDS system on the number of patients encountered as **`r point_estimate_encounters`**, 95% CI **[`r ci_encounters$lower_ci`, `r ci_encounters$upper_ci`]**. We estimated the proportional treatment effect on providers dropping out of the healthcare system as **`r point_estimate_churn`**, 95% CI **[`r ci_churn$lower_ci`, `r ci_churn$upper_ci`]**. In order to move ahead with the implementation of the CDS system as it is currently designed, several stakeholders have indicated that they would like to ensure that the implementation would not increase the annual rate of provider churn (providers quitting the healthcare system) by 4% or greater. Based on this analysis...
+
+* **we can be confident that increased churn will not happen or will be less than that limit.**
+* we cannot be confident that increased churn will not happen or will be less than that limit.
+
+## Success Metrics
+
+::: {.column-margin}
+Exercise 21: Put the correct valus for estimates in the text below. Then, select the interpretation from the options by deleting the other option.
+:::
+
+We estimated the **mean** treatment effect of the CDS system on the number of inappropriate scan orders as **`r point_estimate_scans`**, 95% CI **[`r ci_scans$lower_ci`, `r ci_scans$upper_ci`]**. Based on this estimate,...
+
+* **we can be confident that introducing the CDS system reduces inappropriate scan orders.** 
+* we cannot be confident that introducing the CDS system reduces inappropriate scan orders.
+* we can be confident that introducing the CDS system increases inappropriate scan orders.
+* we can be confident that introducing the CDS system does not reduce inappropriate scan orders.
+
+### Back-of-the-envelope estimate of savings
+
+With our high and low estimates for the treatment effect on inappropriate scan reductions, we can start to form a very loose sense of how much impact this system might have. Here, we can even limit our understanding to purely direct financial costs of inappropriate scans. One prototypical high-cost scan that may be inappropriate is an MRI. Typical direct costs to a patient for an MRI scan range from \$400 to \$4,000. The number of providers who may order scans in the Aurora system in 2016 was 3524, serving almost 3 million patients. Let's assume that MRI prices are representative of inappropriate scans in general. If we do this, we can calculate the total amount of money that might be saved for all patients as a group.
+
+Here, we calculate the high end of our estimate for how much total money would be saved based on our high estimate for the treatment effect and the high estimate for scan costs.
+
+::: {.column-margin}
+Exercise 22: Use the information above and the confidence interval that you calculated to create a rough, high estimate for how much money would be saved in total by patients as a whole from the CDS system implementation. Uncomment the existing code to make sure that the results are displayed.
+
+Hint: You will need to use the available numbers to estimate how many scans might be prevented and then to estimate how much money would be saved from preventing all those scans.
+:::
+
+```{r}
+cost_savings_high_estimate <- round(ci_scans$upper_ci * 4000, 2)
+cost_savings_high_estimate
+```
+
+Here, we calculate the low end of our estimate for how much total money would be saved based on our high estimate for the treatment effect and the high estimate for scan costs.
+
+::: {.column-margin}
+Exercise 23: Use the information above and the confidence interval that you calculated to create a rough, low estimate for how much money would be saved in total by patients as a whole from the CDS system implementation.
+:::
+
+```{r}
+cost_savings_low_estimate <- round(ci_scans$lower_ci * 400, 2)
+cost_savings_low_estimate
+```
+
+Of course, this is a quick "back-of-the-envelope" calculation, but these are substantial savings for a single year of savings. This indicates that this system may have real financial benefits for patients. The full scope of these benefits and whether there will be benefits or negative impacts to quality of care more generally will require further research.
+
+# Acknowledgments
+
+::: {.column-margin}
+Exercise 24: Consult your data prep notes. Include acknowledgments for as many individuals or organizations as possible that you noted were involved in making access to this dataset possible. There are many possible answers, but it should be clear you watched the video or looking into the data collection process!
+:::
+
+For making this analysis possible and for providing public access to data from the Aurora Health randomized control trial, we would like to thank **Aurora Health Care, especially its leadership and data management teams, for their dedication to advancing evidence-based research by making electronic medical records (EMR) data accessible.**
+
+**We extend special thanks to Laura Feeney and Amy Finkelstein for their invaluable contributions, including their work on the chapter about using EMR for randomized evaluations, and for their support throughout the data access process. Our gratitude also goes to the healthcare providers and staff at Aurora Health Care for their cooperation in implementing the intervention, which greatly enriched the quality of the data.**
+
+**We acknowledge the administrative teams for their work in de-identifying data to protect patient privacy while facilitating meaningful insights, as well as the regulatory boards who provided essential approvals for this study. Finally, we are deeply grateful to the patients and providers who participated in the study, whose involvement was indispensable in making this research possible.**

@@ -1,0 +1,800 @@
+---
+title: "INFO 370: Visualization Practice"
+date: "October 3, 2024"
+author: "Swastik Singh"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    theme: default
+---
+
+# Setup
+
+## Objectives
+
+This document is designed to help you practice creating data visualizations, notably:
+
+-   Create histograms, scatterplots, box plots, bar plots, and line graphs
+-   Map data variables onto visual ("aesthetic") features of graphs like the horizontal or vertical axis or colors
+-   Create "facetted" figures with multiple graphs combined
+-   Add labels and titles to graphs
+
+## Load required libraries
+
+To create visualizations, you will use these two libraries:
+
+-   dplyr provides extra tools to manipulate data
+-   ggplot2 provides tools for creating visualizations
+
+These two are part of the "tidyverse" collection of libraries. You can load each seperately, or just load the whole "tidyverse"
+
+```{r}
+#install.packages("tidyverse")
+library(tidyverse)
+```
+
+## Our sample dataset
+
+msleep is a dataset that is included in the ggplot2 library.
+
+This dataset is taken from the a real research article (avaialable for the curious [here](https://www.pnas.org/doi/10.1073/pnas.0610080104)):
+
+> Savage, V. M., & West, G. B. (2007). A quantitative, theoretical framework for understanding mammalian sleep. Proceedings of the National Academy of Sciences, 104(3), 1051-1056.
+
+This data set includes information about 83 different species, in particular it describes the sleep habits, diet, and morphology of different mammals.
+
+## Getting the dataset
+
+The following code gets us the dataset. Note that there are many ways to load data with R! This one is unusal because the data is packaged with ggplot2
+
+```{r}
+#| echo: true
+msleep <- ggplot2::msleep
+```
+
+## Check out the data
+
+There are 11 different variables recorded in msleep. Use glimpse to get a sense of what variables are in there!
+
+```{r}
+glimpse(msleep)
+```
+
+Most of the variables will be fairly straightforward based on their name and sample values. Some things to note:
+
+-   conversation lists conservation status of a species -- how close it is to becoming extinct. You can look up the meaning of specific conservation codes [on wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Conservation_status), but common ones are "lc" for Least Concern, "vu" for Vulnerable, or "nt" for Near Threatened.
+-   sleep_total, sleep_rem, and awake all list the typical number of hours that a member of the species engages in sleep, REM sleep, or awakeness in a typical day.
+-   sleep_cycle shows how long (in hours) it typically takes a member of that species to complete a "sleep cycle"; a sleep cycle is one cycle through all of the different stages of sleep (humans are usually described as having 3 non-REM stages and a fourth REM stage)
+-   brainwt and bodywt are typical adult weights in kilograms
+
+# Core Graph Types
+
+## Examples and Exercises
+
+This document includes examples to practice creating visualizations. For different kinds of visualizations, there will be a fully worked out example. Then, there will be an exercise for you to try out! When writing the code for your example, remember that you can try copying and modifying example code or look things up online (For instance at [R4df](https://r4ds.hadley.nz/data-visualize) ).
+
+## Scatterplots
+
+Scatterplots are incredibly powerful visualization tools, and are often the first type of graph that data scientists will try to create to get a sense of relationships between different variables in their data.
+
+------------------------------------------------------------------------
+
+There are different "kinds" of sleep -- most famously, REM (rapid eye movement sleep) has an important role in things like dreaming. Is REM sleep proportional to total sleep?
+
+We can evaluate this with a scatterplot. Here's an example!
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem)) +
+  geom_point()
+```
+
+### Alternative Approaches
+
+There are actually multiple ways to tell R what data goes into our graph. The following code does the exact same thing:
+
+```{r}
+ggplot(msleep, aes(x = sleep_total, y = sleep_rem)) +
+  geom_point()
+```
+
+And here's a third way to make the *identical* graph.
+
+```{r}
+ggplot(data = msleep, aes(x = sleep_total, y = sleep_rem)) +
+  geom_point()
+```
+
+All of the above ways to create the graph are perfectly good! Feel free to use any of the approaches in your assignments!
+
+### Adding additional variables
+
+While the core feature of a scatterplot is that there are points that are arranged on the x and y axes, we can also incorporate *extra* variables into our visualization! For instance, we can choose to use color or the shape of points to represent additional information!
+
+The following code creates a scatterplot where points are colored based on the diet an animal has (the kind of "-vore" it is).
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, color = vore)) +
+  geom_point()
+```
+
+In the example above, it would be tricky to identify any particularly interested pattern in the data based on the colors; maybe the carnivores (the red dots) tend to get more REM sleep than the herbivores (green dots) based on the fact that there are more red dots right above bundles of green dots than the other way around. *But*, this isn't a particularly clear relationship! There are no insectivores that get really small amounts of total or REM sleep -- but there also aren't many insectivores. Sometimes we'll represent extra variables in graphs and find that there isn't anything all that interesting to add!
+
+Also note: You will see the following in the graph above:
+
+> Warning message: “Removed 22 rows containing missing values (`geom_point()`).”
+
+In R, a warning is just telling you some useful information -- the code works, but there is a chance that there is something odd going on that you might want to check. In this case, the data frame is actually missing information about REM sleep for some species. We don't know everything about sleep for every mammal! If you see a warning, you can try to interpret it and check things out, but sometimes you can just not worry about it (if things seem to be working correctly). If you see an *error*, then you need to reword things in R.
+
+### Try some scatterplots!
+
+Now, try out some visualizations! For each exercise, you'll need to figure out what variables to use and how to write the ggplot code. Remember you can look at the examples above. And to know which variables are available to create a graph with, you can always use glimpse.
+
+```{r}
+glimpse(msleep)
+```
+
+#### Exercise 1: Awake hours by bodyweight
+
+Do animals that are awake many hours of the day tend to be big animals or little animals compared to those that are asleep much of the day? To check this out, Make a scatterplot that shows the hours an animal typically is awake on the x axis and its body weight on the y axis.
+
+```{r}
+msleep |>
+  ggplot(aes(x = awake, y = bodywt)) +
+  geom_point()
+```
+
+#### Exercise 2: Awake hours by bodyweight and domestication
+
+Let's re-examine the same thing again, but let's have a look at whether domesticated animals are on the high or low end of the awakeness spectrum.
+
+To check this out, make the same scatterplot as before that shows the hours an animal typically is awake on the x axis and its body weight on the y axis *but* color each dot based on the species' conservation status (which includes as an option "domesticated"). Does the relationship between sleep and size seem any different for domesticated animals?
+
+```{r}
+msleep |>
+  ggplot(aes(x = awake, y = bodywt, color = conservation)) +
+  geom_point()
+```
+
+#### Exercise 3: Awake hours by bodyweight and domestication with shapes
+
+It can be difficult to distinguish colors on graphs! This can be especially the case for people who have some form of colorblindness (which is as much as 1 in 25 people in the US and around 1 in 8 US men). Color can be incredibly useful, but we should avoid using color as the *only* clue to structure. In this example, recreate the scatterplot from above, with hours awake on the x axis, bodywt on the y axis, but now assign different shapes automatically to the different points based on conservation (instead of colors).
+
+The way to assign a variable to have different shapes works almost identically to how you assign a variable to have different colors. Either try editing your code below with guesses until you get it to work or search online for how to assign variables to shapes in ggplot2. One resource that might be helpful online is this external [site](https://r-graph-gallery.com/274-map-a-variable-to-ggplot2-scatterplot.html)
+
+```{r}
+msleep |>
+  ggplot(aes(x = awake, y = bodywt, shape = conservation)) +
+  geom_point()
+```
+
+With this many shapes, it might be difficult to tell them apart! But in cases with fewer options to plot, shapes can be very useful!
+
+## Histograms
+
+In addition to scatterplots, histograms are an *extremely* common tool that data scientists use to explore data. In particular, histograms help us understand the *distribution* of a variable -- what are typical values, how spread out are values, are there "clumps" of high and low values or are they evenly distributed around? If you want to look at a *single* numeric variable, histograms are a good first visualization to try out!
+
+Imagine you want to figure out how much sleep is typical for mammalian species -- is 8 hours (as is often reported as "normal" for humans) typical for mammals in general, or is another number perhaps more typical? We can try to evaluate that with a histogram! Here's an example:
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total)) +
+  geom_histogram()
+```
+
+### Bin size
+
+The histogram above shows the number of different species that have sleep values around different ranges. For instance, there are seven species that get around 10 hours of sleep and 2 that get around 20 hours of sleep. It looks like there are indeed several species that are around 8 hours of sleep, but what seems to be the overall "center" of this distribution of sleep scores? It's a little hard to say! The biggest peak is around 10, but if you look, it dips down and then has another spike right after it. This histogram is very *detailed*. Sometimes it's nice to get *less* detail in order to get a fuzzier, but more fulfilling big picture idea of what's going on! One way to do this is to make the "bins" that build up the histogram bigger, like this:
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total)) +
+  geom_histogram(binwidth = 2)
+```
+
+In this example, we have made a histogram where each bin (or bar) in the histogram is exactly 2 hours wide. In this histogram, we can see that there are 20 species that sleep between 9 and 11 hours a day (because the biggest bar has a bin that goes from 9 to 11 -- its centered on 10 and is 2 wide). With this visualization, it seems clear that there is some kind of tendency for mammals to sleep around 10 hours a day! Though it is also clear that there is a lot of variability -- there are still species around 2 hours and 20 hours!
+
+One way to decide how much detail to show on a histogram is with the "binwidth" argument we used above. This works if you know how wide you want each bar to be. But sometimes, you don't know ahead of time how wide you want them to be and you just want to know *how many* bars there will be. By default, R will use 30 bars in a histogram, but we can make it more or less detailed using more or less bars or "bins"! Here's a really "fuzzy", big picture histogram with only 5 bars:
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total)) +
+  geom_histogram(bins = 5)
+```
+
+In this histogram, you can get the idea that values around 9 or 10 are common, and that there's some variability, but you miss a lot of detail. Here's a detailed histogram:
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total)) +
+  geom_histogram(bins = 100)
+```
+
+This histogram shows a lot more detail, because there are many skinny bins. But, it's hard to see trends! The biggest peak now is around 12.5, but it is hard in this visualization to see that there is a big clump of species around 10.
+
+Here's a histogram that is in-between in detail.
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total)) +
+  geom_histogram(binwidth = 1)
+```
+
+There is no "right" or "wrong" level of detail for histograms. They are useful for different things! The "fuzzier" histograms can be better at seeing big picture tendencies or trends. More detailed histograms might let you see small clumps of data that might be useful for you. This example right above might indicate to use that there is a big clump around 10 hours, but that there also seems to be another group of species that centers around 4 or 5. Histograms are for exploring -- and it's often good to try out different settings for their "fuzziness"!
+
+Note that histograms only make sense if you are looking at numeric data -- integers or doubles. You can try out the code below by removing the comment marks (the #s), but you will see that it doesn't work! You will get an error from R and a bunch of scary looking text! You won't break anything, but this code wouldn't work. That is because vore tells us about the species diets (carnivore, herbivore, etc.). These are not numbers! Try running this code chunk to see the error. Then, return to the code chunk and replace vore with "sleep_total" and run it again to see how a numeric variable works.
+
+```{r}
+#msleep |>
+#  ggplot(aes(x = vore)) +
+#  geom_histogram()
+```
+
+### Try out some histograms!
+
+#### Exercise 4: Typical REM sleep
+
+Check out the distribution of REM sleep hours across different species using a histogram (the variable for this is sleep_rem)! Create a histogram, and then try it out with different binwidths (you could try 0.01, 0.1, 1, 2, 3, 4, and 10). What can you see in these different options? If you wanted to get a sense of a "typical" amount of REM sleep, which option do you think is most useful? (There is no "perfect" answer, but typically you want it to be detailed enough to get a sense of how spread out the data is and if there are more than 1 really big clumps, but fuzz enough that you could identify the one or two main clumps of data).
+
+```{r}
+
+```
+
+#### Exercise 5: Spread of bodyweights sleep
+
+Check out the distribution of bodyweights (bodywt) for different species using a histogram. After creating a histogram, try it out with different numbers of bins (try out 3, 30, and 300).
+
+```{r}
+
+```
+
+The bodyweight data is what we call "right-skewed" or "right-tailed". There are lots of values on the left side that trail off to the right. Could you see this pattern in all three versions of this histogram? Probably! But the more bins you used, the more you could get a sense of just *how* skewed the data is. The large majority of species have bodyweights less than 500 kg, and most are really right around 1 kilogram. What kind of mammals do you think are filling up the values on the far right?
+
+#### Exercise 6: Coloring by species order
+
+If we want to find out what kind of species are the large ones in this dataset, we can add an extra variable to our histogram! You can map on extra variables to histograms using the same approach as adding color or shape to scatterplots. With histograms, we will sometimes "fill in" the bars with color based on an extra variable. Here, let's fill in bars with color based on the variable "order" that desribes the taxonomy of the species.
+
+Copy your histogram code from above. Then, to fill in color on a histogram, use almost identical syntax as you would to add color to a scatterplot. *But*, here's the trick: In ggplot, "color" refers to the color of the outline of shapes. "fill" is the term that refers to color of the *inside* of shapes.
+
+```{r}
+
+```
+
+It can be hard to tell apart colors when there are a lot of them, but the rightmost bars should be the shade of purple that corresponds to Proboscidea. If animal taxonomy or Latin isn't your strong suit, you can guess the kind of animals that are in this order by knowing that the order is named after "proboscises" or long noses and includes elephants. This may or may not be surprising to you, but one thing to know is that the only cetaceans in this dataset are dolphins and smaller pilot whales (no large whales like blue whales!).
+
+## Boxplots
+
+Scatterplots and histograms are the most common visualizations that data scientists use to *explore* data. They are great because they can show a lot of detail (even if you can choose to hide some of it). However, when you look at data and figures presented in academic journals, news sources, or in general online, you probably haven't seen too many histograms and scatterplots! Boxplots and barplots are more common tools for *communicating* patterns in data. Boxplots in particular can be thought of as a condensed or simplified version of a histogram in many ways.
+
+Boxplots show the distribution of one variable and they can be used to see typical values and the spread in data. However, they don't show as much detail as histograms. One advantage of boxplots however, is that they are great at comparing the distribution of a numeric variable based on a second categorical variable.
+
+For the simplest case of a boxplot, we can try to figure out the median value (AKA the 50% percentile, a measure of the central tendency of a distribution of data) of some variable. For instance, to get a sense of typical hours of sleep for species, we could use this:
+
+```{r}
+msleep |>
+  ggplot(aes(y = sleep_total)) +
+  geom_boxplot()
+```
+
+In this graph, we can see several things. The black horizontal line is the *median* value for sleep_total, so it looks like around 10 hours of sleep is pretty typical for mammals (that matches what we thought based on the histogram as well). For the median, another way of saying this is that half of mammalls sleep more than 10hr and half of mammals sleep less than 10 hours. We can also get a sense of the spread of the data. The white box tells us where the 25% and 75% percentiles are. In other words, within the box includes the central-most 50% of the dat. Half of species get between around 7.5 and 14 hours of sleep. We can tell how spread out the data is by considering how wide the white box is, and we can have a sense of the central tendency or typical value by looking at the central line.
+
+If we want, we could have a horizontal box plot as well. It's interpreted the same way, but some people prefer them for aesthetic reasons (or for consistency between graphs if you want the x-axis to always mean the same thing).
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total)) +
+  geom_boxplot()
+```
+
+The real value of boxplots is in comparing across multiple boxes! For instance, what if we want to compare the amount of sleep that animals with different diets get, we can add vore (diet) as an extra variable (x or y).
+
+```{r}
+msleep |>
+  ggplot(aes(x = vore, y = sleep_total)) +
+  geom_boxplot()
+```
+
+Based on this graph, it seems that carnivores, herbivore, and omnivores get *around* the same the same amount of sleep. The median value for insectivores is quite a bit higher -- though, there's a lot of variability within the insectivores, so they don't *all* get more sleep than herbivores or carnivores.
+
+### Try out some boxplots!
+
+#### Exercise 7: Domestication and Sleep
+
+Do domesticated animal species (like cats, dogs, horses, cows, chickens) sleep more than non-domesticated animals ("wild" animals)? You can use the msleep dataset to check this out! The variable called "conservation" tells us the conservation status of a species: "vu" for "vulnerable", "en" for "endangered", "lc" for "least concern", etc.. One of the categories is "domesticated", which refers to animals that have been bred by humans to a greater degree and taken on features across their evolution as a result of their close relationship with humans and which make them easier to interact with by humans.
+
+Create a boxplot which shows the distribution of total amounts of sleep for species, split by their conservation status. Compared to all of the different groups, are domesticated animals the group that gets the most sleep? the least sleep? or are they somewhat typical relative to other animals? What is the *median* amount of slepe that domesticated animals get?
+
+```{r}
+
+```
+
+## Barplots
+
+Barplots are incredibly common in information visualization for communication -- though they are much less common in exploratory visualization. That is because barplots do not allow us to see as much data at once -- they show a very concise summary.
+
+Barplots are used to either show the *total* number of things in different categories or are used to show values such as the *average* or other summary statistics in different categories. As it turns out, ggplot gives us two different tools to make barplots, depending on what we want to show.
+
+### Bar plots that show *counts*
+
+The simplest kind of barplot shows the number of items in different groups. In ggplot, the geom called geom_bar does this for us easily. The only thing we need to map in the aesthetic statement is the x axis -- this tells ggplot how to split things up by group and it counts tem up automatically
+
+For instance, if we want to see how many species have different kinds of diets in msleep, we can do the following:
+
+```{r}
+msleep |>
+  ggplot(aes(x = vore)) +
+  geom_bar()
+```
+
+So, the most common kind of mammal in our data were herbivores. We also had some species with diets that were not specified (NA for "Not Applicable). Note that in the code, you *do not need to specify the y axis*. The assumption is that the y is just the count of all the things.
+
+As with other types of graphs, we can add extra mappings if we want. For instance, we can color the bars based on the taxonomical order that species are in. The following does just this:
+
+```{r}
+msleep |>
+  ggplot(aes(x = vore, fill = order)) +
+  geom_bar()
+```
+
+One interesting thing to note is that most carnivores are in fact in the order called "Carnivora" -- that includes species like cats, dogs, and seals. There are other carnivores, but this taxonimic group is the one most specialized for eating meat.
+
+We can try to put in any variable as "fill" or "x", but it is important to note that in barplots, we are looking at *categories*, not *numbers*. For instance, the following tries to fill in the bars based on body weight. This doesn't make sense, since body weight is numeric, not a list of categories like the order of a species or its type of diet.
+
+```{r}
+msleep |>
+  ggplot(aes(x = vore, fill = bodywt)) +
+  geom_bar()
+```
+
+Because "fill" is not a necessary mapping for barplots, ggplot will still make a graph, but ignore your command to color it in by bodyweight! Below is another example that doesn' quite make sense.
+
+```{r}
+msleep |>
+  ggplot(aes(x = bodywt, fill = order)) +
+  geom_bar()
+```
+
+Here, you'll see that no bars were even created -- it's a blank graph! That is because barplot needs you to specify categories that are assigned to each bar. Barplots are always about comparing categories. Body weights could take any value -- they are numbers not categories!
+
+It is easy to mistake a barplot for a histogram! A histogram is about looking at the distribution of a *numeric* variable. In these cases, you need to have the x be a number. Compare the example above with the example below that *does* work.
+
+```{r}
+msleep |>
+  ggplot(aes(x = bodywt, fill = order)) +
+  geom_histogram()
+```
+
+### Try out barplots for counts
+
+#### Exercise 8: Diet and Conservation
+
+Of the mammals which have known conservation statuses in our dataset, is there a type of diet that seems to go along with resilience of the species? Do carnivores, herbivores, insectivores, or omnivores have the greatest proportion of species that are least concern ("lc") or domesticated?
+
+Create a barplot that has bars for each kind of diet, and fill in the bars by each species' conservation status.
+
+```{r}
+msleep |>
+  ggplot(aes(x = vore, fill = conservation)) +
+  geom_bar()
+```
+
+#### Exercise 9: Domesticated diets
+
+Are most domesticated animals herbivores, omnivores, insectivores, or carnivores? You *could* figure this out with some time looking at the graph above, but it'll be easier to create a new barplot with a different mapping of the variables to the aesthetics. Create a new barplot that would let us more easily answer this question.
+
+```{r}
+
+```
+
+### Bar plots that show *summaries* or other numbers
+
+Most often, we want our barplots to show the number or count of items in different categories. Sometimes, though, we want each bar to represent some summary statistic or other number -- things like the *averages* in different categories or really any numerical value.
+
+In these cases, we want to be able to specify the y value as something other than the count. For instance, what if we want a bar for each species, and we want the y value to show the body weight for the species. One way that you might reasonably imagine this could work is like this (but it won't work!):
+
+```{r}
+#msleep |>
+#  ggplot(aes(x = name, y = bodywt)) +
+#  geom_bar()
+```
+
+After running the code above you'll get an error! geom_bar() really *only* works for counting things up! If we want the y axis to show something other than the count, we'll need a different geom, specifically we will use geom_col (for "column").
+
+```{r}
+msleep |>
+  ggplot(aes(x = name, y = bodywt, fill = order)) +
+  geom_col()
+```
+
+The graph above is tricky to read, because the x-axis is tiny and overlapping, but ggplot overall worked! We have the weights for different species lined up (and colored by order).
+
+In cases like this where there are *many* categories, we probably wouldn't want to make a visualization at all -- this is showing a different bar for every single data point. Instead, we most often use geom_col after we have done some work to summarize our data. Below is an example to get a sense of how you might use this.
+
+We might *first* create a new data frame that shows the *averages* for a variable like bodyweight in each category (this is probably a little familiar as a dplyr pipeline).
+
+```{r}
+weight_data <- msleep |>
+  group_by(vore) |>
+  summarize(
+    average_weight = mean(bodywt),
+    n = n())
+
+weight_data
+```
+
+Then, we can create a barplot using geom_col with the new data frame!
+
+```{r}
+weight_data |>
+  ggplot(aes(x = vore, y = average_weight)) +
+  geom_col()
+```
+
+While exploring data, you'll probably use geom_bar more than geom_col, but in making graphs to share with others *at the end of your analysis* you might use geom_col more frequently!
+
+## Line graphs
+
+When we want to show how data *changes over time*, we will most often use line graphs. The sample data set that we have been working with (msleep) *doesn't* have anything that makes sense to look at with a line graph. That is because the data doesn't show any changes across time! To get a taste of line graphs, we'll look at another dataset that's build into R.
+
+This data records the body weights of different chicks (baby chickens) across time. The chickens have been given different diets, which may lead to more or less growth. Here's the variables in the data.
+
+```{r}
+glimpse(ChickWeight)
+```
+
+If we want to see the growth for all the chicks, we can use a line graph. Linegraphs typically need *at least 3 variables*. We need to decide the x axis (usually the *time* variable), we need to decide the y axis (the values we want to see go up or down). We also need to tell R how to group our data up into different lines -- which data points should be connected by each line! For this, we use "group". For instance, if we want a seperate line (group) for each chick, that shows how weight goes up (y) across time (x), we can use this:
+
+```{r}
+ChickWeight |> 
+  ggplot(aes(x = Time, y = weight, group = Chick)) + 
+  geom_line()
+```
+
+In this graph, each line represents a different baby chick gaining weight!
+
+Below is a graph where we haven't specified group. This means that R doesn't know how to split the data up into different lines, so we're just connecting *every* data point in order! If you ever see this kind of pattern, with spikes connected by lines, then you should go back and check that you set "group"!
+
+```{r}
+ChickWeight |> ggplot(aes(x = Time, y = weight)) +
+  geom_line()
+```
+
+Just as with other graphs, you can set extra aesthetic mappings. For instance, we might want to color lines based on the diet that chicks received to get a sense of which diet led to the greatest increases. We put in "color" just as with other graphs.
+
+```{r}
+ChickWeight |> 
+  ggplot(aes(x = Time, 
+             y = weight,
+             group = Chick, 
+             color = Diet)) + 
+  geom_line()
+```
+
+Among other things, in this graph, it looks like Diet 1 (red) mostly does pretty poorly -- weights don't increase by that much. Diet 3 (turquoise) is doing a bit better!
+
+Sometimes, color isn't the way to go when telling apart lines. Remember that you may perceive color differently than other people depending on if you have "typical" color vision or different forms of color blindness! Also, if you are making graphs for communication, it's important to note that some people that you might communicate with will want to print out your graphs from a printer -- and might print in black and white.
+
+In addition to color, we can also use different "linetypes" to distinguish lines, based on patterns of dashes or dots.
+
+```{r}
+ChickWeight |> 
+  ggplot(aes(x = Time, 
+             y = weight, 
+             group = Chick, 
+             linetype = Diet)) + 
+  geom_line()
+```
+
+Note that, as with other types of plots, if we give ggplot an aesthetic mapping that doesn't make sense, it might just ignore it. For instance, you can't really "fill in" a line with color, since a line is just an outline, so geom_line will ignore "fill".
+
+```{r}
+ChickWeight |> 
+  ggplot(aes(x = Time, 
+             y = weight, 
+             group = Chick, 
+             fill = Diet)) +
+  geom_line()
+```
+
+## Combining graph types (geometries)
+
+You don't always need to choose between different types of graphs for one visualization! For instance, you might want the useful summaries in a boxplot to quickly identify the median, but also want a sense of where all the data points are, like you would have in a scatterplot. We can put them together! ggplot makes it really easy to combine multiple graphs.
+
+Here's a boxplot:
+
+```{r}
+msleep |>
+  ggplot(aes(x = vore, y = sleep_total)) +
+  geom_boxplot()
+```
+
+Here's a scatterplot:
+
+```{r}
+msleep |>
+  ggplot(aes(x = vore, y = sleep_total)) +
+  geom_point()
+```
+
+To combine these, you simply add (using +) the geom function from one onto the other. Below, you create a boxplot then *add* points on top!
+
+```{r}
+msleep |>
+  ggplot(aes(x = vore, y = sleep_total)) +
+  geom_boxplot() +
+  geom_point()
+```
+
+Note that ggplot puts things on in the order that you add them. The below creates a scatterplot and then adds the boxes on top, so you can't see them!
+
+```{r}
+msleep |>
+  ggplot(aes(x = vore, y = sleep_total)) +
+  geom_point() +
+  geom_boxplot()
+```
+
+### Try out combining geoms
+
+#### Exercise 10: Add points to a linegraph
+
+Let's think back to the linegraph with chicks.
+
+```{r}
+ChickWeight |>
+  ggplot(aes(x = Time, 
+             y = weight, 
+             group = Chick, 
+             color = Diet)) +
+    geom_line()
+```
+
+The lines cover all the possible times, but of course, in our data, we didn't necessarily measure weight *continuously* at every possible day, hour, minute, second, and millisecond. What if we want to know exactly when the data was recorded in time? We can add data points (a scatterplot) on top of the lines here. Edit the code below to show points at all the times where data was collected. Also, have the shape of the points that are added correspond to the diet that the chicks were fed.
+
+```{r}
+ChickWeight |>
+  ggplot(aes(x = Time, 
+             y = weight, 
+             group = Chick, 
+             color = Diet)) +
+     geom_line()
+```
+
+## Facetting
+
+We can combine graphs -- we can also pull graphs apart. "Facetting" let's us create multiple versions of our graphs, but only show a subset of the data in each "facet". This can allow you to compare patterns across different groups in an easy way.
+
+Below is a graph to see how much REM sleep different species get based on their total sleep. The points are colored based on diet, so we could try to use this graph to get a sense of whether carnivores get proportionately more REM sleep than herbivores or other species. *But*, with 5 different color dots all jammed together on one graph, it can be hard to see patterns for the different "vores" independently.
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, color = vore)) +
+  geom_point()
+```
+
+We can split this graph up based on different facets like vore! The following code creates a different graph for each "vore". We just have to use facet_wrap and then define the variable (vore) that we want to split things up by. facet_wrap works a little differently from ggplot tools we've looked at before. In particular, you will need to put the \~ (tilde) before the name of the variable. In most US keyboards, the tilde is found by pressing shift and hitting the key above tab and before 1 on your keyboard.
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, )) +
+  geom_point() +
+  labs(title = "Sleep by Diet in Mammals") +
+  facet_wrap( ~ vore)
+```
+
+With this graph, we can see that there might be different patterns to the increase in REM sleep for the diffferent groups. For instance, in carnivores, it looks like REM sleep goes up consistently with total sleep (the dots follow a pretty straight line pattern). The herbivores look a little different! For the herbivores, it looks like REM sleep only goes up a little as total sleep increases at first, but the after around 10 hrs total sleep, there might be a faster increase in REM sleep. For omnivores and insectivores, it's hard to see any pattern at all!
+
+Facets work the same way for any kind of graph! Here's a histogram.
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total)) +
+  geom_histogram()
+```
+
+And we can split it up based on vore:
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total)) +
+  geom_histogram() +
+  facet_wrap(~ vore)
+```
+
+### Try out some facetting
+
+#### Exercise 11: Diet by conservation status
+
+Let's create a new graph that would let us see how many domesticated species are carnivores, herbivores, and omnivores. This time create a barplot with bars for each different vore. But, use facet_wrap to split the graphs up based on their conservation status!
+
+```{r}
+
+```
+
+# Readability
+
+## Labels
+
+You now have made a lot of different, cool graphs! After you learn the "syntax" to write out commands in ggplot2, you can create these pretty quickly. When creating exploratory graphs, it's OK that our figures looks pretty clunky. But, we sometimes we also need to make our graphs interpretable for other people! We'll want to *label* our graphs.
+
+There are several ways to create labels and titles in ggplot, but the easiest is using labs(). Inside labs, you will need to specify the *kind of label* you want to create, and then use the equals sign to say what text you want to show up. For the text, make sure to use quotation marks!
+
+Here, we add a title to a graph!
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total)) +
+  geom_histogram(bins = 10) +
+  labs(title = "Typical Sleep for Mammal Species")
+```
+
+In many communication contexts, we'll need to provide a little more info with a subtitle.
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total)) +
+  geom_histogram(bins = 10) +
+  labs(title = "Typical sleep for Mammal Species",
+       subtitle = "Based on 83 mammalian species")
+```
+
+In addition to adding titles, we will often want to create more meaningful labels for our axes and legends. By default, R uses the name of the variable in our data frame as the labels for the x and y axes, or on top of legends. Here's an example where we haven't specified anything.
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, color = vore)) +
+  geom_point()
+```
+
+If you wanted to share this graph, your audience might not know that "vore" refers to the diet of a species. They also might not know that sleep_rem refers to the typical number of hours of REM sleep that a species get. It's best to provide clear labels for our axes. When we have *numbers*, we should also specify the units the numbers are in (hours, minutes, seconds, kilograms, pounds, etc.).
+
+To add labels to axes and legends for different aesthetic parts of a graph like x, y, and color, we'll assign those in the labs() function as well! It works the same as adding a title, but add a comma (,) between each label you want to add.
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, color = vore)) +
+  geom_point() +
+  labs(title = "REM and Total Sleep Comparison by Diet",
+       x = "Typical Total Sleep (hours)",
+       y = "Typical REM Sleep (hours)",
+       color = "Diet")
+```
+
+You can see that the axis and legend labels have now been replaced with more interpretable labels!
+
+Finally, when we produce figures for public or external viewing, it is best practice to help the reader identify the provenance or source of the data, as well as other useful information. This can be done in a caption.
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, color = vore)) +
+  geom_point() +
+  labs(title = "REM and Total Sleep Comparison by Diet",
+       x = "Typical Total Sleep (hours)",
+       y = "Typical REM Sleep (hours)",
+       color = "Diet",
+       caption = "Data available at https://ggplot2.tidyverse.org/reference/msleep.html")
+```
+
+### Try out some labels
+
+#### Exercise 12
+
+Copy any of the graphs that you made earlier in the activity and add meaningful labels for all axes and legends and add a title!
+
+```{r}
+
+```
+
+## Themes
+
+Labels and titles help the audience understand your graphs. Sometimes you might also want to simply change up the look of a graph for clarity or visual appeal. In ggplot, we can do this with "themes".
+
+Below is a graph with the default "look" in ggplot.
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, color = vore)) +
+  geom_point() +
+  labs(title = "REM and Total Sleep Comparison by Diet",
+       x = "Typical Total Sleep (hours)",
+       y = "Typical REM Sleep (hours)",
+       color = "Diet")
+```
+
+If we want, we can change the look or "theme" of graphs by adding on theme functions. In this case, we're redoing the same graph but putting it in the "minimalistic" theme (theme_minimal).
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, color = vore)) +
+  geom_point() +
+  labs(title = "REM and Total Sleep Comparison by Diet",
+       x = "Typical Total Sleep (hours)",
+       y = "Typical REM Sleep (hours)",
+       color = "Diet") +
+  theme_minimal()
+```
+
+You can customize themes in many ways (which we're not going to cover in class, but feel free to look it up!), but there are also many pre-made themes for ggplot. These are alternatives like theme_minimal, but with different looks! You can check out [this website](https://ggplot2.tidyverse.org/reference/ggtheme.html) and scroll down to details to see a list of many available themes. Look up an example theme from that list, replace theme_bw with it, and try out the graph below!
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, color = vore)) +
+  geom_point() +
+  labs(title = "REM and Total Sleep Comparison by Diet",
+       x = "Typical Total Sleep (hours)",
+       y = "Typical REM Sleep (hours)",
+       color = "Diet") 
+
+```
+
+## Color Palettes
+
+In general, when creating visualizations we will not manually define the specific colors that get mapped onto different values. Instead, we will choose a color palette or color scale that will be used by ggplot2 to make the mapping for us. ggplot2 has a default color palette that maps colors with a familiar salmon-y pink, teal, green and purple:
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, color = vore)) +
+  geom_point() +
+  labs(title = "REM and Total Sleep Comparison by Diet",
+       x = "Typical Total Sleep (hours)",
+       y = "Typical REM Sleep (hours)",
+       color = "Diet") 
+```
+
+However, there are many ways to change the color palette. One popular approach is by choosing a new palette using the "Brewer" set of color recommendations. We can do this using scale_fill_brewer() or scale_color_brewer() and selecting a palette by name. For instance, one palette is called "Set2".
+
+```{r}
+msleep |>
+  ggplot(aes(x = sleep_total, y = sleep_rem, color = vore)) +
+  geom_point() +
+  labs(title = "REM and Total Sleep Comparison by Diet",
+       x = "Typical Total Sleep (hours)",
+       y = "Typical REM Sleep (hours)",
+       color = "Diet")  +
+    scale_color_brewer(palette = "Set2")
+```
+
+If you are using fill rather than color in a figure, you can adjust the color scale useing scale_fill_brewer() instead. Here's an example:
+
+```{r}
+msleep |>
+  ggplot(aes(x = conservation, fill = vore)) +
+  geom_bar()  +
+    scale_fill_brewer(palette = "Set2")
+```
+
+You may have noticed something weird here: It doesn't look like the graph bars are filled in at all for the NA values. By default, the brewer color system skips NA values. So, you will often need to manually decalre that color you want for NAs! Here's how to do that:
+
+```{r}
+msleep |>
+  ggplot(aes(x = conservation, fill = vore)) +
+  geom_bar()  +
+    scale_fill_brewer(palette = "Set2", na.value="grey")
+```
+
+```{r}
+msleep |>
+  ggplot(aes(x = conservation, fill = vore)) +
+  geom_bar()  +
+    scale_fill_brewer(palette = "Set2", na.value="grey")
+```
+
+### Try out a color palette
+
+To see a list of different color palette names, run ?scale_color_brewer. However, it is best practice to select a pallet that is accessible for people with various forms of colorblindness. To see a list of decent color palette choices, check out [this link](https://www.datanovia.com/en/blog/the-a-z-of-rcolorbrewer-palette/#show-only-colorblind-friendly-brewer-palettes).
+
+#### Exercise 13
+
+Choose a graph that used color or fill from examples above and recreate it below, but switch the color palette to a new selection from the color-blind friendly list shown above.
+
+```{r}
+
+```
+
+# Rendering this Tutorial
+
+Now that you've created all these examples, make sure to render this tutorial as an html file. While you're at it, why don't you change the overall theme for this document? You can check out Quarto themes at <https://bootswatch.com/>. Choose one of the themes and alter the YAML header at the very top of this file before hitting render!
+
+Once you've done that, you're all done with this doc. But feel free to return to it as a reference when making visualizations (or check out R4DS or many, many other sources on visualizations with ggplot2)!

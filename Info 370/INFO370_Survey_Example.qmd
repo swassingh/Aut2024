@@ -1,0 +1,64 @@
+---
+title: "Presentation"
+author: "Carson G Miller Rigoli"
+date: today
+format:
+  html:
+    theme: pulse
+    embed-resources: true
+---
+
+## Survey Summary
+
+This report outlines a survey conducted to help understand the preferred class arrival times of UW students.
+
+## Acquire Data
+
+To collect data for this survey, I used a convenience sample of 6 students that sat near me in my INFO class in Autumn 2024. I asked each for their name and for when they ideally would prefer to arrive to class. I specifically asked how many seconds before (negative) or after (positive) the beginning of class they would prefer to be seated.
+
+Here is the data I collected:
+
+```{r}
+#| echo: false
+
+# Enter Measurements
+names <- c("Maria", "Linh", "Ravi", "Esther", "Lee")
+preferred_times <- c(0, -20, -60, -120, -1200)
+
+# Convert into a data frame and store with a name
+survey_data <- data.frame(name = names, preferred_time = preferred_times)
+
+# Show data frame
+survey_data
+```
+## Tranform Data
+
+For this analysis, I want to report times in minutes rather than seconds, so I created a new variable to record preferred times in minutes by converting the time preferred time variable.
+
+```{r}
+#| echo: false
+
+survey_data$preferred_time_min <- survey_data$preferred_time / 60
+
+```
+
+## Summarize Data
+
+I calculated summary statistics to give me a sense of the data.
+
+```{r}
+summary(survey_data)
+```
+The average preferred arrival time was around 4.7 minutes before the class start.
+
+## Interpret Findings
+
+Based on the survey data, my best guess for the average preferred arrival time for UW students is 4.7 minutes before class starts. While this might be approximately correct, I do not have a lot of confidence in these results.
+
+This study had a number of limitations:
+
+* I only collected a very small sample of data
+* I only collected data from students in an introductory informatics course
+* I only collected data from students who had already arrived in a class
+
+
