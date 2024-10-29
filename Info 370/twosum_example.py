@@ -24,9 +24,11 @@ def two_sum(nums, target):
   List[int]
     Indices of the two numbers that add up to the target.
   """
-  nums_for_soln = []
+  positions = {}
   for i, num in enumerate(nums):
-    
+    if target - num in positions:
+      return [positions[target - num], i]
+    positions[num] = i
 
 if __name__ == "__main__":
   nums = [2, 7, 11, 15]
