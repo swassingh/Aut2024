@@ -1,0 +1,298 @@
+---
+title: "INFO370 Data Sprint 1"
+author: "Swastik Singh, Adam Skoglund, Jah Chen, and Paul Oh"
+date: today
+format:
+  html:
+    embed-resources: true
+---
+
+::: {.callout-note}
+
+## Analysis Summary
+
+In this analysis, I attempted to address the following question or questions:
+
+1. Question: How can we predict the number of scans ordered for each provider based on if they are using the CDS system, years since provider graduation, and if the provider is primarily an emergency provider.
+   *  Conclusion: Based on the analysis, it appears that the number of scans ordered by providers can be predicted using the CDS system usage, years since provider graduation, and whether the provider is primarily an emergency provider. The multiple linear regression model indicates that these factors have a significant relationship with the number of scans ordered.
+2. Question: FILL IN WITH 1-2 SENTENCE QUESTION
+   *  Conclusion: FILL IN WITH 1-3 SENTENCE CONCLUSION
+
+To answer these questions, I have done the following sub-tasks:
+
+Example (check options with an x in the brackets)
+
+- [x] Use this tool (0 pts)
+
+Data Wrangling
+
+- [x] Filter or pivot a data frame (0.5 pt)
+- [x] Create an appropriate and readable visualization with ggplot2, with interpretable labels and title (0.5 pt)
+- [x] Calculate a summary statistic with summarise() (0.5 pt)
+- [x] Create a new variable or feature by transforming existing ones (0.5 pt)
+- [x] Set the default category or reference level for a factor (0.5 pt)
+
+Model Fitting
+
+- [x] Use simple linear regression with a categorical or numeric predictor (0.5 pt)
+- [x] Use multiple linear regression (0.5 pt)
+- [ ] Use least absolute deviation regression (you still get credit for the two options above if you do this; it's an add-on) (0.5 pt)
+
+Predictions
+
+- [x] Manually calculate a prediction for some novel individual using a linear model  (0.5 pt)
+- [ ] Automatically create predictions for multiple data points using a linear model  (0.5 pt)
+- [x] Visualize residuals from predictions from a linear model  (0.5 pt)
+- [ ] Quantify the performance of one or more linear models by calculating mean squared error or mean absolute deviation with residuals (1 pts)
+
+
+Confidence Intervals
+
+- [x] Calculate a 95% confidence interval using bootstrapping for a proportion, mean, median, mode, or other summary statistic that describes a single variable (0.5 pt)
+- [ ] Calculate a 95% confidence interval using bootstrapping for some statistic that *relates* two or more difference variables to each other (0.5 pt)
+- [ ] Calculate a 95% confidence interval using bootstrapping that involves a proportion or risk ratio (you still get credit for the two options above if you do this; it's an add-on) (0.5 pt)
+- [ ] Calculate the 95% confidence intervals for the parameters of a linear model (0.5 pt)
+
+Justifications (these should be included just before using a summary statistic or fitting a model; bold the text for these using double asterisks.)
+
+- [x] Draw a DAG that includes at least 4 variables (1 pts)
+- [ ] Write 2-3 sentences that identifies at least 3 variables as colliders, mediators, or confounders for some causal analysis (0.5 pt)
+- [ ] Write a 1-3 sentence justification for the choice of a summary statistic that you use (0.5 pt)
+- [ ] Write a 1-3 sentence justification for the choice to use least squares or least absolute deviation when fitting a linear model (0.5 pt)
+
+My analysis used enough sub-tasks to be worth 6 points.
+
+:::
+
+
+# My Analysis
+
+## Question
+
+How can we predict the number of scans ordered for each provider based on if they are using the CDS system, years since provider graduation, and if the provider is primarily an emergency provider.
+
+## Set up environment and Data Wrangling
+
+### Load libraries
+
+```{r}
+library(tidyverse)
+library(infer)
+```
+
+### Load data
+
+```{r}
+load("C:/Users/Fortu/Downloads/Aut2024/Info 370/INFO370_DataSprint1/INFO370_DataSprint1/cds_data.RData")
+# glimpse(provider_full)
+```
+
+```{r}
+# provider_full: the dataset we will be using
+provider <- provider_full |>
+  select(treated,
+         scan_bpa_new,
+         scan_bpa_new_q,
+         provider_graduation_q,
+         most_enc_ed_q,
+         Iquit_sp,
+         Iquit_qp)
+
+provider |>
+  glimpse()
+
+str(provider)
+```
+
+```{r}
+provider <- provider |>
+  mutate(treated = factor(treated),
+         most_enc_ed_q = factor(most_enc_ed_q),
+         Iquit_sp = factor(Iquit_sp),
+         Iquit_qp = factor(Iquit_qp))
+
+provider |>
+  glimpse()
+```
+
+```{r}
+provider <- provider |>
+  filter(Iquit_qp == 0) %>%
+  filter(Iquit_sp == 0)
+
+provider |>
+  group_by(Iquit_qp) |>
+  tally()
+```
+
+```{r}
+provider <- provider |>
+  mutate(provider_graduation_q = na_if(provider_graduation_q, -9999))
+```
+
+```{r}
+provider <- provider |>
+  mutate(change_in_scans = scan_bpa_new - (scan_bpa_new_q  / 8) * 12)
+```
+
+### Summary Statistics
+```{r}
+provider |>
+  summary()
+```
+
+### Visualizations
+```{r}
+# Visualization: Number of scans ordered vs. years since provider graduation, colored by CDS system usage
+ggplot(provider, aes(x = provider_graduation_q, y = scan_bpa_new, color = treated)) +
+   geom_point() +
+   labs(
+      title = "Number of Scans Ordered vs. Years Since Provider Graduation",
+      x = "Years Since Provider Graduation",
+      y = "Number of Scans Ordered",
+      color = "CDS System Usage"
+   ) +
+   theme_minimal()
+```
+
+```{r}
+ggplot(provider, aes(x = scan_bpa_new, fill = factor(treated))) +
+  geom_histogram(binwidth = 10, alpha = 0.6, position = "dodge") +
+  labs(
+    title = "Distribution of Number of Scans Ordered by Treatment Group",
+    x = "Number of Scans Ordered",
+    y = "Count",
+    fill = "Treated (1 = Yes, 0 = No)",
+    caption = "Data source: cds_data.RData"
+  ) +
+  theme_minimal()
+```
+
+## Model Fitting
+
+### Simple Linear Regression
+```{r}
+simple_lm <- lm(scan_bpa_new ~ provider_graduation_q, data = provider)
+# Visualization: Residuals vs. Fitted values for Simple Linear Regression
+ggplot(simple_lm, aes(.fitted, .resid)) +
+   geom_point() +
+   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+   labs(
+      title = "Residuals vs. Fitted Values for Simple Linear Regression",
+      x = "Fitted Values",
+      y = "Residuals"
+   ) +
+   theme_minimal()
+summary(simple_lm)
+```
+### Multiple Linear Regression
+
+```{r}
+multiple_lm <- lm(scan_bpa_new ~ treated + provider_graduation_q + most_enc_ed_q, data = provider)
+# Visualization: Residuals vs. Fitted values for Multiple Linear Regression
+ggplot(multiple_lm, aes(.fitted, .resid)) +
+   geom_point() +
+   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+   labs(
+      title = "Residuals vs. Fitted Values for Multiple Linear Regression",
+      x = "Fitted Values",
+      y = "Residuals"
+   ) +
+   theme_minimal()
+summary(multiple_lm)
+```
+
+```{r}
+dummy_providers <- data.frame(treated = c(0, 0, 1, 0, 1, 1, 1, 0),
+                              provider_graduation_q = c(25, 3, 9, 10, 50, 30, 16, 32),
+                              most_enc_ed_q = c(1, 0, 1, 0, 0, 1, 0, 1))
+
+dummy_providers <- dummy_providers |>
+  mutate(treated = factor(treated),
+         most_enc_ed_q = factor(most_enc_ed_q))
+
+dummy_providers$change_in_scans <- predict(multiple_lm, dummy_providers)
+
+dummy_providers |>
+  glimpse()
+```
+
+## Confidence Intervals
+
+### Calculate a 95% confidence interval using bootstrapping for a proportion, mean, median, mode, or other summary statistic that describes a single variable
+
+```{r}
+scans_data <- provider |>
+  specify(response = change_in_scans) |>
+  generate(reps = 1000, type = "bootstrap") |>
+  calculate(stat = "mean") |>
+  get_confidence_interval(type = "percentile", level = 0.95)
+scans_data
+```
+
+## Justifications
+
+### DAG
+```{mermaid}
+graph TD
+    A[Treated - treated] --> B[Number of Scans Ordered - scan_bpa_new]
+    A --> D[Quit During Study Period - Iquit_sp]
+    A --> E[Quit During Quiet Period - Iquit_qp]
+    C[Most Common Encounter Location - most_enc_ed_q] --> B
+    F[Years Since Graduation - provider_graduation_q] --> B
+    D --> B
+    E --> B
+```
+
+FILL IN YOUR HEADERS, TEXT, AND CODE CHUNKS HERE! INCLUDE HEADERS/SUBHEADERS AND COMMENTS SO IT IS CLEAR WHAT YOU'RE TRYING TO ACCOMPLISH. IF A CODE CHUNK DISPLAYS RESULTS THAT DIRECTLY ANSWER YOUR QUESTION, MAKE A TEXT NOTE SAYING SO UNDERNEATH THE CODE CHUNK. MAKE SURE TO LIST YOUR CONCLUSIONS AT THE TOP OF THE DOCUMENT AND TO CHECK OFF ANY TOOLS YOU USED.
+
+
+
+
+
+
+
+
+
+
+
+# Conceptual Questions
+
+For the following section, fill in text for your answers. Do not alter the overall structure of the document!
+
+## Conceptual Question 1: Types of Analysis
+
+For each of the following types of analysis, write about one sentence that defines that type of analysis relative to the other types and write one to three sentences that describe an example of how the current data set could be used for each type of analysis (what is a question you could ask/answer using the data set?). *Don't use the original question the data set was intended to answer, but you can include questions from your current analysis.*.
+
+*  Causal Analysis
+   *  Definition: Causal analysis aims to determine whether one variable directly affects another variable.
+   *  Example: Using the current data set, we could investigate whether the use of the CDS system causes a reduction in the number of scans ordered by providers.
+
+*  Descriptive Analysis
+   *  Definition: Descriptive analysis focuses on summarizing and describing the main features of a data set.
+   *  Example: We could use the data set to describe the distribution of the number of scans ordered by providers, including measures such as mean, median, and standard deviation.
+
+*  Predictive Analysis
+   *  Definition: Predictive analysis uses historical data to make predictions about future events or outcomes.
+   *  Example: We could use the data set to predict the number of scans a provider is likely to order based on their years since graduation and whether they use the CDS system.
+
+## Conceptual Question 2: Validity
+
+For each of the types of validity below, write a definition in your own words (about 1 sentence). Then, for your analysis of the current data set, write an example of something you would want to check or consider to ensure your analysis is (at least decently) valid. If the type of validity is irrelevant, then say so and say why. Write 2-3 sentences for each example.
+
+*  Construct Validity
+   *  Definition: Construct validity refers to how well a test or tool measures the concept that it is intended to measure.
+   *  Example: To ensure construct validity in our analysis, we need to verify that the variables we use (e.g., CDS system usage, years since provider graduation) accurately represent the constructs we are interested in (e.g., technology adoption, experience level).
+
+*  External Validity
+   *  Definition: External validity is the extent to which the results of a study can be generalized to other settings, populations, and times.
+   *  Example: To ensure external validity, we should consider whether the sample of providers in our data set is representative of the broader population of providers. If our sample is biased or not diverse, our findings may not be generalizable.
+
+*  Internal Validity
+   *  Definition: Internal validity refers to the extent to which a study can establish a cause-and-effect relationship between variables, free from confounding factors.
+   *  Example: To ensure internal validity, we need to control for potential confounders that could affect the relationship between CDS system usage and the number of scans ordered. This might involve including additional variables in our regression model or using techniques like matching or randomization.
+   
+# That's all!
+
+Make sure you check all the boxes and put in conclusions at the top of the document, render your report and submit it!
+   

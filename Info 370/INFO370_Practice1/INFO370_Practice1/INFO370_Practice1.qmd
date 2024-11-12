@@ -1,0 +1,468 @@
+---
+title: "INFO370: Practice & Review Day"
+author: "Carson G Miller Rigoli, Swastik Singh"
+date: today
+format: 
+  revealjs:
+    embed-resources: true
+---
+# Introduction
+
+## Agenda
+
+*  DAG Practice
+*  General Practice
+
+## DAG Practice
+
+First, we'll start with an activity to practice making DAGs to represent causal structures.
+
+Go to Canvas, and download the first Quarto file.
+
+```{mermaid}
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '30px', 'fontFamily': 'Inter'}}}%%
+
+graph LR
+	        T(Treatment) --> M(Mediator)
+	        M --> O(Outcome)
+          C(Confounder) --> T
+          C --> O
+          T --> X(Collider)
+          O --> X
+	
+	        style T fill:white, stroke-width:0px
+	        style O fill:white, stroke-width:0px
+	        style M fill:white, stroke-width:0px
+	        style C fill:white, stroke-width:0px
+	        style X fill:white, stroke-width:0px
+```
+
+
+## Practice Tasks
+
+Today we'll practice a lot of skills from class!
+
+There are 6 tasks. For each one, you should create a new Quarto document, load the required data, and accomplish the goals described for the task.
+
+This document and the data files are all available on Canvas!
+
+## Formatting Reports
+
+Complete each task in a new Quarto document.
+
+Include a title and author, and `embed-resources: true`
+
+Make the report readable with short explanatory text notes.
+
+Create headers for sections of your analysis with titles like "Setup", "Loading Data", "Data Prep", "Model Fitting", "Predictions", or similar.
+
+Write a short (1-3 sentences) at the end that directly points out the answer to the questions for the tasks. Include a header that says "Conclusions".
+
+## Tasks and Skills
+
+You can do the tasks out of order if you'd like! (4 and 5 are the longest)
+
+* Task 1: Data Wrangling
+* Task 2: Wrangling & Simple Linear Regression
+* Task 3: Confidence Intervals with Bootstrapping
+* Task 4: Linear Models for Causal Inference & DAGs
+* Task 5: Linear Models for Prediction
+* Task 6: Confidence Intervals & Choosing Summary Stats
+
+## Load Libraries
+
+You'll need `tidyverse` throughout. 
+
+```{r}
+#| echo: true
+library(tidyverse)
+library(ggplot2)
+```
+
+# Task 1: Find the Least Homogenous Region  
+
+## National Survey on Drug Use & Health {.smaller}
+
+* Survey estimates how many people use different drugs (and other things) in the US.
+*  Data is reported at the *state* level. You'll characterize regional trends in US states.
+*  Ages 12-17 is "youth"; Ages 18-25 is "young adult"; Ages 26+ is "older adult"
+
+![](https://www.cdc.gov/nchs/images/hus/redesign/region-map.png?_=90920){fig-alt="A map showing the United States split into the four CDC regions: West, South, Midwest, and Northeast"}
+
+## Load data
+
+Note: Data only includes 2014. All numbers represent total number of individuals estimated in that state.
+
+This code should be all you need to load the data.
+
+```{r}
+#| echo: false
+NSDUH2014 <- read.csv("C:/Users/Fortu/Downloads/Aut2024/Info 370/INFO370_Practice1/INFO370_Practice1/nsduh2014.csv")
+NSDUH2014 |>
+  glimpse()
+```
+
+## Your Goals {.smaller}
+
+It may be the case that different regions in the US have different youth drinking "cultures". But just because the CSC defines a region as a group of states doesn't mean that the pre-defined regions are all homogeneous -- or similar. 
+
+Use the data provided to find the US region (West, Midwest, South, Northeast) that has the most diversity across its states in terms of youth drinking.
+
+*  Create a visualization that compares the regions
+*  Create an output that quantifies the diversity in youth drinking in each region, and orders the regions from most diverse to least .
+
+Note:
+
+*  Diversity in numeric variables can be quantified using standard deviation, interquartile range, or range.
+*  States have different populations; To compare trends across states, you will need to look at proportions or percents rather than totals.
+
+## Task 1 Code {.smaller}
+
+```{r}
+# Calculate proportions of youth drinking
+NSDUH2014 <- NSDUH2014 %>%
+  mutate(youth_drinking_prop = Alcohol12_17 / Population12_17)
+
+# Summarize data by region
+region_summary <- NSDUH2014 %>%
+  group_by(Region) %>%
+  summarize(
+    mean_prop = mean(youth_drinking_prop, na.rm = TRUE),
+    sd_prop = sd(youth_drinking_prop, na.rm = TRUE),
+    iqr_prop = IQR(youth_drinking_prop, na.rm = TRUE),
+    range_prop = max(youth_drinking_prop, na.rm = TRUE) - min(youth_drinking_prop, na.rm = TRUE)
+  )
+
+# Order regions by diversity (standard deviation)
+region_summary <- region_summary %>%
+  arrange(desc(sd_prop))
+
+# Create a visualization
+ggplot(NSDUH2014, aes(x = Region, y = youth_drinking_prop)) +
+  geom_boxplot() +
+  labs(title = "Youth Drinking Proportions by Region", x = "Region", y = "Youth Drinking Proportion") +
+  theme_minimal()
+
+# Print the summary table
+region_summary
+```
+
+# Task 2: Quantify Relationship Between Youth Drinking and Adult Drinking
+
+## National Survey on Drug Use & Health {.smaller}
+
+* Survey estimates how many people use different drugs (and other things) in the US.
+*  Data is reported at the *state* level. You'll characterize regional trends in US states.
+*  Ages 12-17 is "youth"; Ages 18-25 is "young adult"; Ages 26+ is "older adult"
+
+![](https://www.cdc.gov/nchs/images/hus/redesign/region-map.png?_=90920){fig-alt="A map showing the United States split into the four CDC regions: West, South, Midwest, and Northeast"}
+
+## Load data
+
+Note: Data only includes 2014. All numbers represent total number of individuals estimated in that state.
+
+This is the same data as from Task 1
+
+```{r}
+#| echo: false
+NSDUH2014 <- read.csv("C:/Users/Fortu/Downloads/Aut2024/Info 370/INFO370_Practice1/INFO370_Practice1/nsduh2014.csv")
+NSDUH2014 |>
+  glimpse()
+```
+
+
+## Your Goals {.smaller}
+
+Across the US in 2014, did states where lots of youth use marijuana tend to be states where lots of adults use marijuana? Or was the opposite the case?
+
+*  Provide a visualization that lets you informally evaluate the question.
+*  Formally quantify your answer with a single number. How much do youth marijuana use rates for states tend to be higher or lower based on adult marijuana use rates?
+
+Note:
+
+*  In this case, adult refers to **all** residents aged 18 and up.
+*  This question is descriptive and non-inferential (we have data from all states, so don't need to use confidence intervals)
+
+## Task 2 Code {.smaller}
+
+```{r}
+# Calculate proportions of marijuana use
+NSDUH2014 <- NSDUH2014 %>%
+  mutate(youth_marijuana_prop = Marijuana12_17 / Population12_17,
+         adult_marijuana_prop = (Marijuana18.25 + Marijuana26plus) / (Population18_25 + Population26plus))
+
+# Create a scatter plot to visualize the relationship
+ggplot(NSDUH2014, aes(x = adult_marijuana_prop, y = youth_marijuana_prop)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(title = "Youth vs Adult Marijuana Use Proportions by State",
+       x = "Adult Marijuana Use Proportion",
+       y = "Youth Marijuana Use Proportion") +
+  theme_minimal()
+
+# Calculate the correlation coefficient
+correlation <- cor(NSDUH2014$adult_marijuana_prop, NSDUH2014$youth_marijuana_prop, use = "complete.obs")
+correlation
+```
+
+# Task 3: Test for Differences in Income
+
+## Fictional Income Data
+
+Here, we'll consider some (not super realistic) synthetic data! Imagine it is a representative sample of working adults who live in the fictional country of Datania.
+
+Imagine that you work with the Datania government which is building a phone app to help low-income residents easily access information about government financial support services. Datania is going to prototype the app, but can only afford to prototype it for one mobile phone system first (iPhones or Android in this case). If you want to make sure the app is prototyped with people who are likely to use it, does it matter which system to try out first?
+
+## Load Data
+
+Note: Incomes are reported as percentile ranks but you can treat them like any other income measure. 100 means you have the best income in the country. 0 means you have the lowest income in the country. You can say something like "Income scores are 20 points higher" to describe the units.
+
+```{r}
+#| echo: false
+income_dat <- read.csv("C:/Users/Fortu/Downloads/Aut2024/Info 370/INFO370_Practice1/INFO370_Practice1/synth_income_dat.csv")
+income_dat |> glimpse()
+```
+
+## Your Goals {.smaller}
+
+Based on the sample of residents in your data, estimate the difference in incomes for people with iPhones vs those without iPhones. Decide if you have evidence to support the idea that iPhones are a better or worse choice to prototype this system.
+
+Note: 
+
+*  You only have a sample so will need to calculate a 95% confidence interval. 
+*  You will need to decide what summary statistic makes the most sense here.
+*  This is not a causal analysis.
+
+## Task 3 Code {.smaller}
+```{r}
+# Calculate the mean income for iPhone and non-iPhone users
+income_summary <- income_dat %>%
+  group_by(iphone) %>%
+  summarize(
+    mean_income = mean(income_rank, na.rm = TRUE),
+    sd_income = sd(income_rank, na.rm = TRUE),
+    n = n()
+  )
+
+# Calculate the difference in mean income
+mean_diff <- diff(income_summary$mean_income)
+
+# Calculate the standard error of the difference
+se_diff <- sqrt(sum((income_summary$sd_income^2) / income_summary$n))
+
+# Calculate the 95% confidence interval for the difference in means
+ci_lower <- mean_diff - qt(0.975, df = min(income_summary$n) - 1) * se_diff
+ci_upper <- mean_diff + qt(0.975, df = min(income_summary$n) - 1) * se_diff
+
+# Output the results
+list(
+  mean_difference = mean_diff,
+  ci_lower = ci_lower,
+  ci_upper = ci_upper
+)
+
+# Create a visualization of income distribution by iPhone ownership
+ggplot(income_dat, aes(x = as.factor(iphone), y = income_rank)) +
+  geom_boxplot() +
+  labs(title = "Income Distribution by iPhone Ownership", x = "iPhone Ownership", y = "Income Rank") +
+  theme_minimal()
+```
+
+# Task 4: Estimate Effect of Higher Education on Income
+
+## Higher Education and Income
+
+Reuse the Datania data to estimate the average treatment effect of getting higher education on incomes! Does getting a college degree in Datania let you earn more money? 
+
+This is a *causal* analysis.
+
+```{r}
+#| echo: false
+income_dat <- read.csv("synth_income_dat.csv")
+income_dat |> ggplot(aes(x = higher_ed, y = income_rank)) + geom_boxplot() + labs(x = "Higher Education", y = "Income Rank") + theme_minimal()
+```
+
+## Load Data
+
+Use the same data as in Task 3!
+
+```{r}
+income_dat <- read.csv("C:/Users/Fortu/Downloads/Aut2024/Info 370/INFO370_Practice1/INFO370_Practice1/synth_income_dat.csv")
+income_dat |>
+  glimpse()
+```
+
+## Your Goals {.smaller}
+
+Do your best job at estimating the average treatment effect of higher education on income given the available data. How much do you expect income to go up (in points) for people who get a higher education?
+
+1. Create a DAG to reason about how to estimate the average treatment effect of higher education on income.
+   *  You can include variable not recorded, or just the ones recorded.
+2.  Use linear regression to estimate to the best of your ability with the data the average treatment effect of higher education on income. Report this as a 95% confidence interval.
+
+Some useful things to consider:
+
+*  Control for confounders. Don't control for mediators or colliders!
+*  `confint()` shows confidence intervals for models
+
+## Task 4 DAG {.smaller}
+
+```{mermaid}
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '30px', 'fontFamily': 'Inter'}}}%%
+
+graph LR
+  HE(Higher Education) --> I(Income)
+  A(Age) --> HE
+  A --> I
+  E(Experience) --> I
+  E --> HE
+  F(Family Background) --> HE
+  F --> I
+
+  style HE fill:white, stroke-width:0px
+  style I fill:white, stroke-width:0px
+  style A fill:white, stroke-width:0px
+  style E fill:white, stroke-width:0px
+  style F fill:white, stroke-width:0px
+```
+
+## Task 4 Code {.smaller}
+```{r}
+# Fit a linear regression model controlling for confounders
+model <- lm(income_rank ~ higher_ed, data = income_dat)
+
+# Get the summary of the model
+summary(model)
+
+# Get the 95% confidence interval for the higher education coefficient
+confint(model, "higher_ed", level = 0.95)
+```
+
+
+## DAGs
+
+To create a DAG, you can use mermaid. You can copy this starter example.
+
+```{mermaid}
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '30px', 'fontFamily': 'Inter'}}}%%
+
+graph LR
+	        I(Impact) --> F(Fracture Size)
+	        F --> R(Recovery Time)
+          P(General Health) --> I
+          P --> R
+	
+	        style I fill:white, stroke-width:0px
+	        style F fill:white, stroke-width:0px
+	        style R fill:white, stroke-width:0px
+	        style P fill:white, stroke-width:0px
+```
+
+# Task 5: Predict Birthweights
+
+## Best Guesses for Birthweights
+
+Imagine you work at a (imaginary and irresponsible) hospital where there was a technical error that means that the birth weight for 15 babies born yesterday were not recorded. You do have other information about those babies, and want to create a model that would let you predict or fill in the missing information for those babies.
+
+You should build this model and make predictions. 
+
+Later on, you *find* the missing birth weights. You should evaluate your model by seeing how far off your predictions were from the true weights.
+
+## Missing Record Babies
+
+All of the babies were healthy and born full-term (between 37 and 41 weeks). 
+
+You have length of pregnancies in weeks (combgest), the age of mother (mager), and if the baby was a twin or single child.
+
+You should only use `found` after you've made predictions. 
+
+```{r}
+hospital <- read.csv("C:/Users/Fortu/Downloads/Aut2024/Info 370/INFO370_Practice1/INFO370_Practice1/hospital_lost.csv")
+hospital |> 
+  glimpse()
+```
+
+## Load Training Data {.smaller}
+
+This data includes a random sample of 10,000 US live births.
+
+Use it to fit a model of live-births.
+
+*  `combgest` is weeks of pregnancy
+*  `mager` is the age of the mother at birth
+*  `dbwt` is weight of the newborn at date of birth in grams
+
+```{r}
+births <- read.csv("C:/Users/Fortu/Downloads/Aut2024/Info 370/INFO370_Practice1/INFO370_Practice1/sample_births.csv")
+births |>
+  glimpse()
+```
+
+## Goals {.smaller}
+
+Use a model to make predictions for the babies and check how well it did; Find the baby that you did the worst job at predicting! Make sure to:
+
+*  Create a model to predict the birth weights of the 15 babies with lost records.
+    *  Build the model *only* with data from babies that were born full term (37 to 41 weeks) and discounting babies that were triplets or quadruplets.
+*  Predict the weight for the missing records and display the predictions for each baby.
+*  Calculate how far each prediction was from the true weight
+*  Display a table that shows how bad your predictions were from worst to best for the babies
+
+Note: 
+
+*  You could calculate predictions manually or use `predict()`.
+*  You'll need to save your predictions and then subtract the `found` values
+
+# Task 6: Compare Birthweight to "Typical"
+
+## Heavy or Light Babies
+
+Imagine that you have two friends who have children. Both believe that one of their children was born particularly heavy relative to babies born in similar situations. You want to test this and decide if their babies were born on the heavier side or lighter side of comparable babies.
+
+In this case, "comparable" is going to refer to other babies that were born healthy, had mothers who were a similar age and who were pregnant for the same length of time. Also, twins should only be compared with twins and single babies with single babies.
+
+## Load Data
+
+Here is info about your friends' babies.
+
+```{r}
+babies <- read.csv("C:/Users/Fortu/Downloads/Aut2024/Info 370/INFO370_Practice1/INFO370_Practice1/babies.csv")
+babies
+```
+
+## Load Data {.smaller}
+
+Reuse the births data from Task 5.
+
+*  `combgest` is weeks of pregnancy
+*  `mager` is the age of the mother at birth
+*  `dbwt` is weight of the newborn at date of birth in grams
+
+```{r}
+births <- read.csv("C:/Users/Fortu/Downloads/Aut2024/Info 370/INFO370_Practice1/INFO370_Practice1/sample_births.csv")
+births |>
+  glimpse()
+```
+
+## Goals
+
+For each baby, decide if you can find evidence that it was a "large baby" relative to other babies that were born under similar circumstances (similar mother age, pregnancy time, and plurality).
+
+For each baby:
+
+*  Create a 95% confidence interval for a statistic that would let you know what the most "typical" baby weight is for babies that are comparable to your friend's child.
+*  Decide if you can confidently say that the baby is above or below the most typical baby. 
+
+# Advanced Task: LAD Regression
+
+## Heavy or Light Babies
+
+Redo Task 6, but instead of estimating statistics for two subgroups of babies and comparing the estimates to Sam and Alex's weights, build a model.
+
+LS regression uses `lm()` and essentially tells you how the mean value of a group depends on predictors. LAD regression uses `lad()` and essentially tells us how the median value of a group depends on predictors. When you make a prediction with LAD, you are basically saying that the median value would be that number. To use `lad()`, you'll need the `L1pack` library.
+
+# Get to it!
+
+# Download the Files
+
+Go to Canvas and download the folder with data and this file!

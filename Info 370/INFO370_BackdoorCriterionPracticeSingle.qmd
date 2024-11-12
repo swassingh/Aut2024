@@ -1,0 +1,110 @@
+---
+title: "INFO 370: Backdoor Criterion Practice"
+date: today
+format: 
+  html:
+    embed-resources: true
+---
+
+# Practice with DAGs
+
+## Create a DAG
+
+Replace the code chunk below with one that would create a DAG to represent the causal system that you need to consider if you wanted to estimate the effect of *age (A)* on the *number of skin cancer cells detected (C)* for adult humans. You should include at least the following variables:
+
+*  Age
+*  Skin cancer cells
+*  Income
+*  Health insurance
+*  Sunscreen use
+*  Sunburn frequency
+*  Itchy skin
+
+For creating the DAG, you can rely on your own judgments or you can look online for evidence that points to relationships between specific variables if you are unsure. 
+
+
+```{mermaid}
+%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '30px', 'fontFamily': 'Inter'}}}%%
+
+graph LR
+	A(Age) --> C(Skin Cancer Cells)
+	A --> I(Income)
+	I --> H(Health Insurance)
+	H --> C
+	A --> S(Sunscreen Use)
+	S --> C
+	A --> F(Sunburn Frequency)
+	F --> C
+	C --> K(Itchy Skin)
+
+	style A fill:white, stroke-width:0px
+	style C fill:white, stroke-width:0px
+	style I fill:white, stroke-width:0px
+	style H fill:white, stroke-width:0px
+	style S fill:white, stroke-width:0px
+	style F fill:white, stroke-width:0px
+	style K fill:white, stroke-width:0px
+```
+
+## Interpret the DAG
+
+Identify each of the following! Depending on your DAG, there may be different numbers of mediators, colliders, and confounding variables!
+
+The treatment variable:
+
+*  Age
+
+The response variable:
+
+*  Skin Cancer Cells
+
+Confounders:
+
+*  Income
+*  Health Insurance
+*  Sunscreen Use
+*  Sunburn Frequency
+
+Mediators:
+
+*  Income
+*  Health Insurance
+*  Sunscreen Use
+*  Sunburn Frequency
+
+Colliders:
+
+*  Itchy Skin
+
+What are the backdoor paths in your DAG?:
+
+1. A -> I -> H -> C
+2. A -> S -> C
+3. A -> F -> C
+
+How would you close each backdoor path you identified?
+
+1. Control for Income and Health Insurance to close the path A -> I -> H -> C
+2. Control for Sunscreen Use to close the path A -> S -> C
+3. Control for Sunburn Frequency to close the path A -> F -> C
+
+Would you be able to satisfy the backdoor criteria with control?
+
+*  Yes, because controlling for Income, Health Insurance, Sunscreen Use, and Sunburn Frequency would block all backdoor paths.
+*  No, because if any of these variables are not controlled for, the backdoor paths would remain open.
+
+Would you be able to satisfy the backdoor criteria with control *if you did not record whether or not individuals regularly use sunscreen*?
+
+*  Yes, because you can still control for Income, Health Insurance, and Sunburn Frequency to block the remaining backdoor paths.
+*  No, because not controlling for Sunscreen Use leaves the path A -> S -> C open.
+
+Would you be able to satisfy the backdoor criteria with control *if you did not record the frequency of sunburns for individuals*?
+
+*  Yes, because you can still control for Income, Health Insurance, and Sunscreen Use to block the remaining backdoor paths.
+*  No, because not controlling for Sunburn Frequency leaves the path A -> F -> C open.
+
+Based off the information above, imagine that you have a data frame that includes information for all of the available variables. What would the lm() function look like that would let you do your best job at estimating the effect?
+
+lm(Skin_Cancer_Cells ~ Age + Income + Health_Insurance + Sunscreen_Use + Sunburn_Frequency, data = data_frame)
+
+

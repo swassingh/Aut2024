@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="generator" content="quarto-1.5.57">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <meta name="author" content="Swastik Singh, Carson G Miller Rigoli">
 <meta name="dcterms.date" content="2024-10-28">
@@ -3465,7 +3465,7 @@ $ change_in_encounters  &lt;dbl&gt; 499.5, -9.0, 127.5, -0.5, 159.0, 39.0, 4.0, 
 <pre><code># A tibble: 1 × 2
   lower_ci upper_ci
      &lt;dbl&gt;    &lt;dbl&gt;
-1   -0.742    0.851</code></pre>
+1   -0.789    0.917</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>point_estimate_grad <span class="ot">&lt;-</span> provider <span class="sc">|&gt;</span></span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">specify</span>(<span class="at">response =</span> provider_graduation_q, <span class="at">explanatory =</span> treated) <span class="sc">|&gt;</span></span>
@@ -3506,7 +3506,7 @@ Explanatory: treated (factor)
 <pre><code># A tibble: 1 × 2
   lower_ci upper_ci
      &lt;dbl&gt;    &lt;dbl&gt;
-1  -0.0183   0.0356</code></pre>
+1  -0.0149   0.0343</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>point_estimate_ed <span class="ot">&lt;-</span> provider <span class="sc">|&gt;</span></span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">specify</span>(<span class="at">response =</span> most_enc_ed_q, <span class="at">explanatory =</span> treated, <span class="at">success =</span> <span class="st">&quot;1&quot;</span>) <span class="sc">|&gt;</span></span>
@@ -3634,7 +3634,7 @@ Explanatory: treated (factor)
 <pre><code># A tibble: 1 × 2
   lower_ci upper_ci
      &lt;dbl&gt;    &lt;dbl&gt;
-1    0.269     2.37</code></pre>
+1    0.328     2.26</code></pre>
 </div>
 </div>
 </section>
@@ -3685,7 +3685,7 @@ Explanatory: treated (factor)
 <pre><code># A tibble: 1 × 2
   lower_ci upper_ci
      &lt;dbl&gt;    &lt;dbl&gt;
-1    -44.0     26.5</code></pre>
+1    -47.6     27.5</code></pre>
 </div>
 </div>
 </section>
@@ -3736,7 +3736,7 @@ Explanatory: treated (factor)
 <pre><code># A tibble: 1 × 2
   lower_ci upper_ci
      &lt;dbl&gt;    &lt;dbl&gt;
-1  -0.0116   0.0255</code></pre>
+1  -0.0107   0.0256</code></pre>
 </div>
 </div>
 </section>
@@ -3749,7 +3749,7 @@ Explanatory: treated (factor)
 
 <div class="no-row-height column-margin column-container"><div class>
 <p>Exercise 19: Fill in the point estimates and confidence intervals below based on your analysis above. Then, select the type of validity that evaluating the comparison groups is intended to address. Do this by deleting the other options. Leave the **s to bold your choice.</p>
-</div></div><p>Our estimate for the difference in mean years since graduation for our two groups is <strong>0.0528207</strong>, 95% CI <strong>[-0.7419112, 0.8507329]</strong>. Our estimate for the difference in proportion of providers working in the emergency department is <strong>0.0096628</strong>, 95% CI <strong>[-0.0182705, 0.0356295]</strong>. Given that both of these confidence intervals include zero, we have not found evidence that our comparison groups are unbalanced in terms of these features. Because randomization should remove these differences on average, we work with the assumption that randomization functions well – unless we can be confident that it has not based on our data. If we had found the two groups to be unbalanced, this would most directly be a threat to:</p>
+</div></div><p>Our estimate for the difference in mean years since graduation for our two groups is <strong>0.0528207</strong>, 95% CI <strong>[-0.7891729, 0.9168903]</strong>. Our estimate for the difference in proportion of providers working in the emergency department is <strong>0.0096628</strong>, 95% CI <strong>[-0.0148644, 0.0343314]</strong>. Given that both of these confidence intervals include zero, we have not found evidence that our comparison groups are unbalanced in terms of these features. Because randomization should remove these differences on average, we work with the assumption that randomization functions well – unless we can be confident that it has not based on our data. If we had found the two groups to be unbalanced, this would most directly be a threat to:</p>
 <ul>
 <li><strong>interval validity</strong></li>
 <li>external validity</li>
@@ -3761,7 +3761,7 @@ Explanatory: treated (factor)
 
 <div class="no-row-height column-margin column-container"><div class>
 <p>Exercise 20: Put the correct valus for estimates in the text below. Then, select the interpretation from the options by deleting the other option.</p>
-</div></div><p>We estimated the <strong>mean</strong> treatment effect of the CDS system on the number of patients encountered as <strong>-10.8413159</strong>, 95% CI <strong>[-44.0309051, 26.4547096]</strong>. We estimated the proportional treatment effect on providers dropping out of the healthcare system as <strong>0.006594</strong>, 95% CI <strong>[-0.0116218, 0.0255336]</strong>. In order to move ahead with the implementation of the CDS system as it is currently designed, several stakeholders have indicated that they would like to ensure that the implementation would not increase the annual rate of provider churn (providers quitting the healthcare system) by 4% or greater. Based on this analysis…</p>
+</div></div><p>We estimated the <strong>mean</strong> treatment effect of the CDS system on the number of patients encountered as <strong>-10.8413159</strong>, 95% CI <strong>[-47.6395873, 27.4819079]</strong>. We estimated the proportional treatment effect on providers dropping out of the healthcare system as <strong>0.006594</strong>, 95% CI <strong>[-0.0106503, 0.0255861]</strong>. In order to move ahead with the implementation of the CDS system as it is currently designed, several stakeholders have indicated that they would like to ensure that the implementation would not increase the annual rate of provider churn (providers quitting the healthcare system) by 4% or greater. Based on this analysis…</p>
 <ul>
 <li><strong>we can be confident that increased churn will not happen or will be less than that limit.</strong></li>
 <li>we cannot be confident that increased churn will not happen or will be less than that limit.</li>
@@ -3772,7 +3772,7 @@ Explanatory: treated (factor)
 
 <div class="no-row-height column-margin column-container"><div class>
 <p>Exercise 21: Put the correct valus for estimates in the text below. Then, select the interpretation from the options by deleting the other option.</p>
-</div></div><p>We estimated the <strong>mean</strong> treatment effect of the CDS system on the number of inappropriate scan orders as <strong>1.3296292</strong>, 95% CI <strong>[0.2686783, 2.3705475]</strong>. Based on this estimate,…</p>
+</div></div><p>We estimated the <strong>mean</strong> treatment effect of the CDS system on the number of inappropriate scan orders as <strong>1.3296292</strong>, 95% CI <strong>[0.3280606, 2.257633]</strong>. Based on this estimate,…</p>
 <ul>
 <li><strong>we can be confident that introducing the CDS system reduces inappropriate scan orders.</strong></li>
 <li>we cannot be confident that introducing the CDS system reduces inappropriate scan orders.</li>
@@ -3791,7 +3791,7 @@ Explanatory: treated (factor)
 <div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>cost_savings_high_estimate <span class="ot">&lt;-</span> <span class="fu">round</span>(ci_scans<span class="sc">$</span>upper_ci <span class="sc">*</span> <span class="dv">4000</span>, <span class="dv">2</span>)</span>
 <span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>cost_savings_high_estimate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 9482.19</code></pre>
+<pre><code>[1] 9030.53</code></pre>
 </div>
 </div>
 <p>Here, we calculate the low end of our estimate for how much total money would be saved based on our high estimate for the treatment effect and the high estimate for scan costs.</p>
@@ -3802,7 +3802,7 @@ Explanatory: treated (factor)
 <div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>cost_savings_low_estimate <span class="ot">&lt;-</span> <span class="fu">round</span>(ci_scans<span class="sc">$</span>lower_ci <span class="sc">*</span> <span class="dv">400</span>, <span class="dv">2</span>)</span>
 <span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>cost_savings_low_estimate</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 107.47</code></pre>
+<pre><code>[1] 131.22</code></pre>
 </div>
 </div>
 <p>Of course, this is a quick “back-of-the-envelope” calculation, but these are substantial savings for a single year of savings. This indicates that this system may have real financial benefits for patients. The full scope of these benefits and whether there will be benefits or negative impacts to quality of care more generally will require further research.</p>
