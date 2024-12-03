@@ -1,0 +1,2647 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>assignment-9</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="Assignment 9_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Assignment 9_files/libs/quarto-html/quarto.js"></script>
+<script src="Assignment 9_files/libs/quarto-html/popper.min.js"></script>
+<script src="Assignment 9_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Assignment 9_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Assignment 9_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Assignment 9_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Assignment 9_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Assignment 9_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Assignment 9_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+
+<p>In this problem, you will implement your own version of a collaborative filtering recommender system that will use user-based CF strategy to predict users’ ratings on items. You will use a modified version of a joke ratings dataset Download joke ratings dataset. This is a modified subset of the data from the Jester Online Joke Recommender System.</p>
+<p>The data set contains two files. The file “modified_jester_data.csv” contains the ratings on 100 jokes by 1000 users (each row is a user profile). The ratings have been normalized to be between 1 and 21 (a 20-point scale), with 1 being the lowest rating. A zero indicates a missing rating. The file “jokes.csv” contains the joke ids mapped to the actual text of the jokes.</p>
+<p>Given: a user-item ratings matrix with rows corresponding to user records (ratings given by a user to various items), and columns corresponding to all items in the database. This is the training data. The target user u_t may be a new user or an existing user and is represented as a vector of ratings over all items (a row in the ratings matrix).</p>
+<p>The task is to generate a list of jokes for a user based on similar user profiles (“Users who are similar to you also liked these jokes …”).</p>
+<p>Limit your response to 1-2 pages. [5 points]</p>
+<div id="cell-1" class="cell" data-execution_count="72">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyterrier <span class="im">as</span> pt</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> pt.started():</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  pt.init()</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># User-based collaborative filtering</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>C:\Users\Fortu\AppData\Local\Temp\ipykernel_22032\1874076957.py:2: DeprecationWarning: Call to deprecated function (or staticmethod) started. (use pt.java.started() instead) -- Deprecated since version 0.11.0.
+  if not pt.started():</code></pre>
+</div>
+</div>
+<div id="cell-2" class="cell" data-execution_count="73">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>jokes <span class="op">=</span> pd.read_csv(<span class="st">'./Assignment9_data/Assignment7_data/jokes.csv'</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>jokes.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="73">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">jokeid</th>
+<th data-quarto-table-cell-role="th">joke</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>1</td>
+<td>A man visits the doctor. The doctor says "I ha...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>2</td>
+<td>This couple had an excellent relationship goin...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>3</td>
+<td>Q. What's 200 feet long and has 4 teeth? A. Th...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>4</td>
+<td>Q. What's the difference between a man and a t...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>5</td>
+<td>Q. What's O. J. Simpson's Internet address? A....</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div id="cell-3" class="cell" data-execution_count="74">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>jokes.shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="74">
+<pre><code>(100, 2)</code></pre>
+</div>
+</div>
+<div id="cell-4" class="cell" data-execution_count="75">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>ratings <span class="op">=</span> pd.read_csv(<span class="st">'./Assignment9_data/Assignment7_data/ratings.csv'</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>ratings.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="75">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">jokeid</th>
+<th data-quarto-table-cell-role="th">userid</th>
+<th data-quarto-table-cell-role="th">rating</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>1</td>
+<td>1</td>
+<td>3.18</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>1</td>
+<td>2</td>
+<td>15.08</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>1</td>
+<td>3</td>
+<td>0.00</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>1</td>
+<td>4</td>
+<td>0.00</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>1</td>
+<td>5</td>
+<td>19.50</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div id="cell-5" class="cell" data-execution_count="76">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>ratings.shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="76">
+<pre><code>(100000, 3)</code></pre>
+</div>
+</div>
+<div id="cell-6" class="cell" data-execution_count="77">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># data normalization</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> MinMaxScaler</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-7" class="cell" data-execution_count="78">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>col <span class="op">=</span> <span class="st">'rating'</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>ratings[col] <span class="op">=</span> MinMaxScaler().fit_transform(ratings[col].values.reshape(<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-8" class="cell" data-execution_count="79">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create user matrix: contains relationships among users and items</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>user_matrix <span class="op">=</span> pd.pivot_table(ratings, values<span class="op">=</span><span class="st">'rating'</span>, index<span class="op">=</span><span class="st">'userid'</span>, columns<span class="op">=</span><span class="st">'jokeid'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-9" class="cell" data-execution_count="80">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>user_matrix.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="80">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">jokeid</th>
+<th data-quarto-table-cell-role="th">1</th>
+<th data-quarto-table-cell-role="th">2</th>
+<th data-quarto-table-cell-role="th">3</th>
+<th data-quarto-table-cell-role="th">4</th>
+<th data-quarto-table-cell-role="th">5</th>
+<th data-quarto-table-cell-role="th">6</th>
+<th data-quarto-table-cell-role="th">7</th>
+<th data-quarto-table-cell-role="th">8</th>
+<th data-quarto-table-cell-role="th">9</th>
+<th data-quarto-table-cell-role="th">10</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">91</th>
+<th data-quarto-table-cell-role="th">92</th>
+<th data-quarto-table-cell-role="th">93</th>
+<th data-quarto-table-cell-role="th">94</th>
+<th data-quarto-table-cell-role="th">95</th>
+<th data-quarto-table-cell-role="th">96</th>
+<th data-quarto-table-cell-role="th">97</th>
+<th data-quarto-table-cell-role="th">98</th>
+<th data-quarto-table-cell-role="th">99</th>
+<th data-quarto-table-cell-role="th">100</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">userid</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">1</td>
+<td>0.152153</td>
+<td>0.946890</td>
+<td>0.064115</td>
+<td>0.135885</td>
+<td>0.166507</td>
+<td>0.119617</td>
+<td>0.055024</td>
+<td>0.725837</td>
+<td>0.096651</td>
+<td>0.298565</td>
+<td>...</td>
+<td>0.661244</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.256938</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2</td>
+<td>0.721531</td>
+<td>0.512440</td>
+<td>0.830622</td>
+<td>0.735407</td>
+<td>0.412440</td>
+<td>0.064115</td>
+<td>0.491388</td>
+<td>0.270813</td>
+<td>0.951196</td>
+<td>0.967464</td>
+<td>...</td>
+<td>0.661244</td>
+<td>0.289474</td>
+<td>0.512440</td>
+<td>0.902392</td>
+<td>0.517225</td>
+<td>0.423923</td>
+<td>0.672727</td>
+<td>0.542584</td>
+<td>0.319617</td>
+<td>0.577512</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">3</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.958373</td>
+<td>0.969856</td>
+<td>0.958373</td>
+<td>0.969856</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>...</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.960766</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">4</td>
+<td>0.000000</td>
+<td>0.925837</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.612440</td>
+<td>0.916746</td>
+<td>0.391388</td>
+<td>0.823445</td>
+<td>0.000000</td>
+<td>0.614354</td>
+<td>...</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.551675</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">5</td>
+<td>0.933014</td>
+<td>0.746890</td>
+<td>0.326794</td>
+<td>0.268421</td>
+<td>0.591388</td>
+<td>0.602871</td>
+<td>0.863158</td>
+<td>0.746890</td>
+<td>0.505263</td>
+<td>0.800478</td>
+<td>...</td>
+<td>0.774641</td>
+<td>0.793301</td>
+<td>0.730622</td>
+<td>0.774641</td>
+<td>0.800478</td>
+<td>0.600478</td>
+<td>0.675120</td>
+<td>0.839713</td>
+<td>0.612440</td>
+<td>0.602871</td>
+</tr>
+</tbody>
+</table>
+
+<p>5 rows × 100 columns</p>
+</div>
+</div>
+</div>
+<div id="cell-10" class="cell" data-execution_count="81">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>user_matrix <span class="op">=</span> user_matrix.fillna(<span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-11" class="cell" data-execution_count="82">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>user_matrix.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="82">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">jokeid</th>
+<th data-quarto-table-cell-role="th">1</th>
+<th data-quarto-table-cell-role="th">2</th>
+<th data-quarto-table-cell-role="th">3</th>
+<th data-quarto-table-cell-role="th">4</th>
+<th data-quarto-table-cell-role="th">5</th>
+<th data-quarto-table-cell-role="th">6</th>
+<th data-quarto-table-cell-role="th">7</th>
+<th data-quarto-table-cell-role="th">8</th>
+<th data-quarto-table-cell-role="th">9</th>
+<th data-quarto-table-cell-role="th">10</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">91</th>
+<th data-quarto-table-cell-role="th">92</th>
+<th data-quarto-table-cell-role="th">93</th>
+<th data-quarto-table-cell-role="th">94</th>
+<th data-quarto-table-cell-role="th">95</th>
+<th data-quarto-table-cell-role="th">96</th>
+<th data-quarto-table-cell-role="th">97</th>
+<th data-quarto-table-cell-role="th">98</th>
+<th data-quarto-table-cell-role="th">99</th>
+<th data-quarto-table-cell-role="th">100</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">userid</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">1</td>
+<td>0.152153</td>
+<td>0.946890</td>
+<td>0.064115</td>
+<td>0.135885</td>
+<td>0.166507</td>
+<td>0.119617</td>
+<td>0.055024</td>
+<td>0.725837</td>
+<td>0.096651</td>
+<td>0.298565</td>
+<td>...</td>
+<td>0.661244</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.256938</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2</td>
+<td>0.721531</td>
+<td>0.512440</td>
+<td>0.830622</td>
+<td>0.735407</td>
+<td>0.412440</td>
+<td>0.064115</td>
+<td>0.491388</td>
+<td>0.270813</td>
+<td>0.951196</td>
+<td>0.967464</td>
+<td>...</td>
+<td>0.661244</td>
+<td>0.289474</td>
+<td>0.512440</td>
+<td>0.902392</td>
+<td>0.517225</td>
+<td>0.423923</td>
+<td>0.672727</td>
+<td>0.542584</td>
+<td>0.319617</td>
+<td>0.577512</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">3</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.958373</td>
+<td>0.969856</td>
+<td>0.958373</td>
+<td>0.969856</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>...</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.960766</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">4</td>
+<td>0.000000</td>
+<td>0.925837</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.612440</td>
+<td>0.916746</td>
+<td>0.391388</td>
+<td>0.823445</td>
+<td>0.000000</td>
+<td>0.614354</td>
+<td>...</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.551675</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+<td>0.000000</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">5</td>
+<td>0.933014</td>
+<td>0.746890</td>
+<td>0.326794</td>
+<td>0.268421</td>
+<td>0.591388</td>
+<td>0.602871</td>
+<td>0.863158</td>
+<td>0.746890</td>
+<td>0.505263</td>
+<td>0.800478</td>
+<td>...</td>
+<td>0.774641</td>
+<td>0.793301</td>
+<td>0.730622</td>
+<td>0.774641</td>
+<td>0.800478</td>
+<td>0.600478</td>
+<td>0.675120</td>
+<td>0.839713</td>
+<td>0.612440</td>
+<td>0.602871</td>
+</tr>
+</tbody>
+</table>
+
+<p>5 rows × 100 columns</p>
+</div>
+</div>
+</div>
+<div id="cell-12" class="cell" data-execution_count="83">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>user_matrix.shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="83">
+<pre><code>(1000, 100)</code></pre>
+</div>
+</div>
+<div id="cell-13" class="cell" data-execution_count="84">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics.pairwise <span class="im">import</span> cosine_similarity</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> operator</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-14" class="cell" data-execution_count="85">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> similar_users(user_id, matrix, k<span class="op">=</span><span class="dv">1</span>):</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="co">"""</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co">  Find the most similar users to a given user based on cosine similarity.</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co">  Parameters:</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co">  user_id (int or str): The ID of the user for whom to find similar users.</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="co">  matrix (pd.DataFrame): A pandas DataFrame where rows represent users and columns represent features.</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co">  k (int, optional): The number of similar users to return. Default is 1.</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="co">  Returns:</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="co">  list: A list of user IDs that are most similar to the given user.</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co">  """</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create a df of just the current user</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  user <span class="op">=</span> matrix[matrix.index <span class="op">==</span> user_id]</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># And one of all other users</span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>  other_users <span class="op">=</span> matrix[matrix.index <span class="op">!=</span> user_id]</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># calculate cosine similarity between user and each other user one by one</span></span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  similarities <span class="op">=</span> cosine_similarity(user, other_users)[<span class="dv">0</span>].tolist()</span>
+<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create list of indices of these users to get the data quickly</span></span>
+<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>  indices <span class="op">=</span> other_users.index.tolist()</span>
+<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create key/values pairs of user index and their similarity</span></span>
+<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>  index_similarity <span class="op">=</span> <span class="bu">dict</span>(<span class="bu">zip</span>(indices, similarities))</span>
+<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Sort by similarity</span></span>
+<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>  index_similarity_sorted <span class="op">=</span> <span class="bu">sorted</span>(index_similarity.items(), key<span class="op">=</span>operator.itemgetter(<span class="dv">1</span>))</span>
+<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>  index_similarity_sorted.reverse()</span>
+<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Get the top k highest similarities</span></span>
+<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>  top_users_similarities <span class="op">=</span> index_similarity_sorted[:k]</span>
+<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>  simusers <span class="op">=</span> [u[<span class="dv">0</span>] <span class="cf">for</span> u <span class="kw">in</span> top_users_similarities]</span>
+<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> simusers</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-15" class="cell" data-execution_count="86">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This is what we want to do</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>bc <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>sm <span class="op">=</span> similar_users(bc, user_matrix, k<span class="op">=</span><span class="dv">5</span>)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[245, 983, 471, 158, 588]</code></pre>
+</div>
+</div>
+<div id="cell-16" class="cell" data-execution_count="87">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a function to recommend jokes to a user</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> recommend_items(userid, similar_user_indices, matrix, items):</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Load vector for the similar users</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  similar_users <span class="op">=</span> matrix[matrix.index.isin(similar_user_indices)]</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate the mean rating for each joke</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  similar_users <span class="op">=</span> similar_users.mean(axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Convert to dataframe so it's easy to sort and filter</span></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  similar_users_df <span class="op">=</span> pd.DataFrame(similar_users, columns<span class="op">=</span>[<span class="st">'mean'</span>])</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Load vector for the current user</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  user <span class="op">=</span> matrix[matrix.index <span class="op">==</span> userid]</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Transpose it so it's easier to filter</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  jokes_rated <span class="op">=</span> user.transpose()</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>  jokes_rated.columns <span class="op">=</span> [<span class="st">'rating'</span>]</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Select jokes that the user has not rated</span></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  jokes_rated <span class="op">=</span> jokes_rated[jokes_rated[<span class="st">'rating'</span>] <span class="op">==</span> <span class="dv">0</span>]</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Generate a list of jokes the user has not rated</span></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  jokes_nl <span class="op">=</span> jokes_rated.index.tolist()</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Score those jokes by filtering the similar users vector to just the jokes the current user has not rated</span></span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>  scores <span class="op">=</span> similar_users_df[similar_users_df.index.isin(jokes_nl)]</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Sort the scores and return the top items</span></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>  recommendations <span class="op">=</span> scores.sort_values(<span class="st">'mean'</span>, ascending<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>  top_jokes <span class="op">=</span> recommendations.head(items)</span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>  top_n_jokes_indices <span class="op">=</span> recommendations.index.tolist()</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>  joke_information <span class="op">=</span> jokes[jokes[<span class="st">'jokeid'</span>].isin(top_n_jokes_indices)]</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> top_jokes, joke_information</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-17" class="cell" data-execution_count="88">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This is what we want to do</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>x, y <span class="op">=</span> recommend_items(<span class="dv">1</span>,sm,user_matrix,<span class="dv">10</span>)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>x.join(y.set_index(<span class="st">'jokeid'</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="88">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">mean</th>
+<th data-quarto-table-cell-role="th">joke</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">jokeid</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">84</td>
+<td>0.148421</td>
+<td>Q: What is the difference between Mechanical E...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">88</td>
+<td>0.141914</td>
+<td>A Czechoslovakian man felt his eyesight was gr...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">77</td>
+<td>0.089952</td>
+<td>If pro- is the opposite of con- then congress ...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">74</td>
+<td>0.075024</td>
+<td>Q: How many stalkers does it take to change a ...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">80</td>
+<td>0.075024</td>
+<td>Hillary Bill Clinton and the Pope are sitting ...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">73</td>
+<td>0.072727</td>
+<td>Q: What is the difference between George Wash...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">76</td>
+<td>0.000000</td>
+<td>There once was a man and a woman that both go...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">75</td>
+<td>0.000000</td>
+<td>Q: Do you know the difference between an intel...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">72</td>
+<td>0.000000</td>
+<td>On the first day of college the Dean addressed...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">71</td>
+<td>0.000000</td>
+<td>At a recent Sacramento PC Users Group meeting ...</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<p>A website has collected ratings from 25 past users (user1-user25) on a selection of recent games. The ratings range from 1 = worst to 5 = best. Two new users (NU1 and NU2) have recently visited the site and rated some of the games(” ” represents missing ratings). The two new users’ ratings are given in the last two rows.</p>
+<div id="cell-19" class="cell" data-execution_count="89">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the data</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> {</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">'User'</span>: [<span class="st">'user1'</span>, <span class="st">'user2'</span>, <span class="st">'user3'</span>, <span class="st">'user4'</span>, <span class="st">'user5'</span>, <span class="st">'user6'</span>, <span class="st">'user7'</span>, <span class="st">'user8'</span>, <span class="st">'user9'</span>, <span class="st">'user10'</span>, <span class="st">'user11'</span>, <span class="st">'user12'</span>, <span class="st">'user13'</span>, <span class="st">'user14'</span>, <span class="st">'user15'</span>, <span class="st">'user16'</span>, <span class="st">'user17'</span>, <span class="st">'user18'</span>, <span class="st">'user19'</span>, <span class="st">'user20'</span>, <span class="st">'user21'</span>, <span class="st">'user22'</span>, <span class="st">'user23'</span>, <span class="st">'user24'</span>, <span class="st">'user25'</span>, <span class="st">'NU1'</span>, <span class="st">'NU2'</span>],</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">'Minecraft'</span>: [<span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">3</span>, np.nan, <span class="dv">2</span>, <span class="dv">5</span>, <span class="dv">1</span>, <span class="dv">2</span>, np.nan, <span class="dv">3</span>, np.nan, <span class="dv">4</span>, np.nan, np.nan, np.nan, np.nan, <span class="dv">1</span>, <span class="dv">5</span>, np.nan, <span class="dv">2</span>, np.nan, <span class="dv">5</span>, <span class="dv">4</span>, <span class="dv">1</span>, np.nan, <span class="dv">3</span>, np.nan],</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">'Fortnite'</span>: [<span class="dv">5</span>, <span class="dv">4</span>, np.nan, <span class="dv">3</span>, <span class="dv">4</span>, np.nan, <span class="dv">4</span>, <span class="dv">1</span>, np.nan, <span class="dv">5</span>, np.nan, <span class="dv">4</span>, np.nan, <span class="dv">5</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, np.nan, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">3</span>, np.nan, np.nan, <span class="dv">3</span>, np.nan, np.nan, <span class="dv">5</span>],</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">'Animal Crossing'</span>: [np.nan, np.nan, <span class="dv">1</span>, np.nan, <span class="dv">3</span>, np.nan, <span class="dv">5</span>, np.nan, <span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>, np.nan, <span class="dv">2</span>, <span class="dv">3</span>, np.nan, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">4</span>, np.nan, <span class="dv">1</span>, np.nan, np.nan, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">2</span>],</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">'Call of Duty: Modern Warfare'</span>: [<span class="dv">3</span>, np.nan, <span class="dv">2</span>, np.nan, <span class="dv">3</span>, <span class="dv">5</span>, np.nan, <span class="dv">2</span>, np.nan, <span class="dv">1</span>, <span class="dv">2</span>, np.nan, <span class="dv">3</span>, np.nan, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>, np.nan, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">4</span>, <span class="dv">2</span>, np.nan, <span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">4</span>, <span class="dv">2</span>],</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">'Madden NFL 20'</span>: [np.nan, <span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">4</span>, np.nan, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">2</span>, np.nan, np.nan, np.nan, <span class="dv">4</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">1</span>, np.nan, <span class="dv">4</span>, np.nan, <span class="dv">5</span>, np.nan, np.nan, <span class="dv">4</span>, np.nan, np.nan, <span class="dv">2</span>, <span class="dv">4</span>],</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  <span class="st">'Mortal Kombat 11'</span>: [np.nan, <span class="dv">2</span>, <span class="dv">2</span>, <span class="dv">1</span>, np.nan, <span class="dv">5</span>, np.nan, np.nan, <span class="dv">2</span>, <span class="dv">1</span>, np.nan, <span class="dv">3</span>, np.nan, <span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">5</span>, np.nan, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">3</span>, np.nan, <span class="dv">2</span>, <span class="dv">1</span>, np.nan, <span class="dv">1</span>, <span class="dv">3</span>, np.nan],</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>  <span class="st">'Super Smash Bros'</span>: [<span class="dv">3</span>, <span class="dv">1</span>, <span class="dv">2</span>, np.nan, <span class="dv">3</span>, np.nan, <span class="dv">1</span>, np.nan, <span class="dv">4</span>, np.nan, <span class="dv">1</span>, <span class="dv">4</span>, <span class="dv">1</span>, np.nan, <span class="dv">4</span>, np.nan, <span class="dv">4</span>, <span class="dv">3</span>, <span class="dv">1</span>, np.nan, <span class="dv">2</span>, np.nan, <span class="dv">1</span>, np.nan, np.nan, np.nan, <span class="dv">1</span>],</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  <span class="st">'Kingdom Hearts III'</span>: [<span class="dv">5</span>, np.nan, <span class="dv">5</span>, <span class="dv">3</span>, np.nan, <span class="dv">1</span>, <span class="dv">4</span>, np.nan, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">4</span>, <span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">5</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">1</span>, np.nan, <span class="dv">5</span>, <span class="dv">1</span>, <span class="dv">5</span>, <span class="dv">3</span>]</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the DataFrame</span></span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.DataFrame(data)</span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="89">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">User</th>
+<th data-quarto-table-cell-role="th">Minecraft</th>
+<th data-quarto-table-cell-role="th">Fortnite</th>
+<th data-quarto-table-cell-role="th">Animal Crossing</th>
+<th data-quarto-table-cell-role="th">Call of Duty: Modern Warfare</th>
+<th data-quarto-table-cell-role="th">Madden NFL 20</th>
+<th data-quarto-table-cell-role="th">Mortal Kombat 11</th>
+<th data-quarto-table-cell-role="th">Super Smash Bros</th>
+<th data-quarto-table-cell-role="th">Kingdom Hearts III</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>user1</td>
+<td>1.0</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>5.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>user2</td>
+<td>5.0</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>user3</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>2.0</td>
+<td>2.0</td>
+<td>2.0</td>
+<td>5.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>user4</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>4.0</td>
+<td>1.0</td>
+<td>NaN</td>
+<td>3.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>user5</td>
+<td>2.0</td>
+<td>4.0</td>
+<td>3.0</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">5</td>
+<td>user6</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>1.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">6</td>
+<td>user7</td>
+<td>1.0</td>
+<td>4.0</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>4.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">7</td>
+<td>user8</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">8</td>
+<td>user9</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>2.0</td>
+<td>4.0</td>
+<td>3.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">9</td>
+<td>user10</td>
+<td>3.0</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>NaN</td>
+<td>5.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10</td>
+<td>user11</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>4.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">11</td>
+<td>user12</td>
+<td>4.0</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>4.0</td>
+<td>2.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">12</td>
+<td>user13</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>3.0</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>4.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">13</td>
+<td>user14</td>
+<td>NaN</td>
+<td>5.0</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>4.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">14</td>
+<td>user15</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>3.0</td>
+<td>3.0</td>
+<td>4.0</td>
+<td>5.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">15</td>
+<td>user16</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>2.0</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>1.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">16</td>
+<td>user17</td>
+<td>1.0</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>4.0</td>
+<td>5.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">17</td>
+<td>user18</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>4.0</td>
+<td>3.0</td>
+<td>3.0</td>
+<td>5.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">18</td>
+<td>user19</td>
+<td>NaN</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>5.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">19</td>
+<td>user20</td>
+<td>2.0</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>5.0</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>4.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">20</td>
+<td>user21</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>4.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">21</td>
+<td>user22</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>1.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">22</td>
+<td>user23</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>4.0</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">23</td>
+<td>user24</td>
+<td>1.0</td>
+<td>3.0</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>5.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">24</td>
+<td>user25</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>NaN</td>
+<td>1.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">25</td>
+<td>NU1</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>5.0</td>
+<td>4.0</td>
+<td>2.0</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>5.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">26</td>
+<td>NU2</td>
+<td>NaN</td>
+<td>5.0</td>
+<td>2.0</td>
+<td>2.0</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>3.0</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<p>Using the item-based CF predict the ratings of these new users for each of the games they have not yet rated. You can use any similarity measures discussed in the class.</p>
+<p>Be sure to show the intermediate steps in your work (or provide a short explanation of how you computed the predictions). Limit your response to 1-2 pages. [5 points]</p>
+<p>Submit a single PDF with both these parts.</p>
+<div id="cell-21" class="cell" data-execution_count="90">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create user DataFrame</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>user_df <span class="op">=</span> df[[<span class="st">'User'</span>]].copy()</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>user_df[<span class="st">'UserID'</span>] <span class="op">=</span> user_df.index <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Create game DataFrame</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>game_df <span class="op">=</span> pd.DataFrame({</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">'Game'</span>: df.columns[<span class="dv">1</span>:],</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  <span class="st">'GameID'</span>: <span class="bu">range</span>(<span class="dv">1</span>, <span class="bu">len</span>(df.columns[<span class="dv">1</span>:]) <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Create ratings DataFrame</span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>ratings_df <span class="op">=</span> df.melt(id_vars<span class="op">=</span>[<span class="st">'User'</span>], var_name<span class="op">=</span><span class="st">'Game'</span>, value_name<span class="op">=</span><span class="st">'Rating'</span>)</span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>ratings_df <span class="op">=</span> ratings_df.merge(user_df, on<span class="op">=</span><span class="st">'User'</span>).merge(game_df, on<span class="op">=</span><span class="st">'Game'</span>)</span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>ratings_df <span class="op">=</span> ratings_df.drop(columns<span class="op">=</span>[<span class="st">'User'</span>, <span class="st">'Game'</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-22" class="cell" data-execution_count="91">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the DataFrames</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"User DataFrame:"</span>)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>user_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>User DataFrame:</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="91">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">User</th>
+<th data-quarto-table-cell-role="th">UserID</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>user1</td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>user2</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>user3</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>user4</td>
+<td>4</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>user5</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">5</td>
+<td>user6</td>
+<td>6</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">6</td>
+<td>user7</td>
+<td>7</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">7</td>
+<td>user8</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">8</td>
+<td>user9</td>
+<td>9</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">9</td>
+<td>user10</td>
+<td>10</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">10</td>
+<td>user11</td>
+<td>11</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">11</td>
+<td>user12</td>
+<td>12</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">12</td>
+<td>user13</td>
+<td>13</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">13</td>
+<td>user14</td>
+<td>14</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">14</td>
+<td>user15</td>
+<td>15</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">15</td>
+<td>user16</td>
+<td>16</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">16</td>
+<td>user17</td>
+<td>17</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">17</td>
+<td>user18</td>
+<td>18</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">18</td>
+<td>user19</td>
+<td>19</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">19</td>
+<td>user20</td>
+<td>20</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">20</td>
+<td>user21</td>
+<td>21</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">21</td>
+<td>user22</td>
+<td>22</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">22</td>
+<td>user23</td>
+<td>23</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">23</td>
+<td>user24</td>
+<td>24</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">24</td>
+<td>user25</td>
+<td>25</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">25</td>
+<td>NU1</td>
+<td>26</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">26</td>
+<td>NU2</td>
+<td>27</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div id="cell-23" class="cell" data-execution_count="92">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">Game DataFrame:"</span>)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>game_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Game DataFrame:</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="92">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Game</th>
+<th data-quarto-table-cell-role="th">GameID</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>Minecraft</td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>Fortnite</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>Animal Crossing</td>
+<td>3</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>Call of Duty: Modern Warfare</td>
+<td>4</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>Madden NFL 20</td>
+<td>5</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">5</td>
+<td>Mortal Kombat 11</td>
+<td>6</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">6</td>
+<td>Super Smash Bros</td>
+<td>7</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">7</td>
+<td>Kingdom Hearts III</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div id="cell-24" class="cell" data-execution_count="93">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">Ratings DataFrame:"</span>)</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>ratings_df</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Ratings DataFrame:</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="93">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Rating</th>
+<th data-quarto-table-cell-role="th">UserID</th>
+<th data-quarto-table-cell-role="th">GameID</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>1.0</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>5.0</td>
+<td>2</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>3.0</td>
+<td>3</td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>NaN</td>
+<td>4</td>
+<td>1</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>2.0</td>
+<td>5</td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">211</td>
+<td>NaN</td>
+<td>23</td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">212</td>
+<td>5.0</td>
+<td>24</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">213</td>
+<td>1.0</td>
+<td>25</td>
+<td>8</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">214</td>
+<td>5.0</td>
+<td>26</td>
+<td>8</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">215</td>
+<td>3.0</td>
+<td>27</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+
+<p>216 rows × 3 columns</p>
+</div>
+</div>
+</div>
+<div id="cell-25" class="cell" data-execution_count="94">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create pivot table for ratings</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>ratings_pivot <span class="op">=</span> ratings_df.pivot_table(index<span class="op">=</span><span class="st">'GameID'</span>, columns<span class="op">=</span><span class="st">'UserID'</span>, values<span class="op">=</span><span class="st">'Rating'</span>)</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the pivot table</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>ratings_pivot.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="94">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">UserID</th>
+<th data-quarto-table-cell-role="th">1</th>
+<th data-quarto-table-cell-role="th">2</th>
+<th data-quarto-table-cell-role="th">3</th>
+<th data-quarto-table-cell-role="th">4</th>
+<th data-quarto-table-cell-role="th">5</th>
+<th data-quarto-table-cell-role="th">6</th>
+<th data-quarto-table-cell-role="th">7</th>
+<th data-quarto-table-cell-role="th">8</th>
+<th data-quarto-table-cell-role="th">9</th>
+<th data-quarto-table-cell-role="th">10</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">18</th>
+<th data-quarto-table-cell-role="th">19</th>
+<th data-quarto-table-cell-role="th">20</th>
+<th data-quarto-table-cell-role="th">21</th>
+<th data-quarto-table-cell-role="th">22</th>
+<th data-quarto-table-cell-role="th">23</th>
+<th data-quarto-table-cell-role="th">24</th>
+<th data-quarto-table-cell-role="th">25</th>
+<th data-quarto-table-cell-role="th">26</th>
+<th data-quarto-table-cell-role="th">27</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">GameID</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">1</td>
+<td>1.0</td>
+<td>5.0</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>...</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>5.0</td>
+<td>4.0</td>
+<td>1.0</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>NaN</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2</td>
+<td>5.0</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>4.0</td>
+<td>1.0</td>
+<td>NaN</td>
+<td>5.0</td>
+<td>...</td>
+<td>NaN</td>
+<td>4.0</td>
+<td>5.0</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>5.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">3</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>...</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>2.0</td>
+<td>3.0</td>
+<td>5.0</td>
+<td>2.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">4</td>
+<td>3.0</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>...</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>4.0</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>5.0</td>
+<td>4.0</td>
+<td>2.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">5</td>
+<td>NaN</td>
+<td>3.0</td>
+<td>2.0</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>4.0</td>
+<td>2.0</td>
+<td>NaN</td>
+<td>...</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>5.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>4.0</td>
+<td>NaN</td>
+<td>NaN</td>
+<td>2.0</td>
+<td>4.0</td>
+</tr>
+</tbody>
+</table>
+
+<p>5 rows × 27 columns</p>
+</div>
+</div>
+</div>
+<div id="cell-26" class="cell" data-execution_count="95">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>ratings_pivot.shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="95">
+<pre><code>(8, 27)</code></pre>
+</div>
+</div>
+<div id="cell-27" class="cell" data-execution_count="96">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>ratings_pivot <span class="op">=</span> ratings_pivot.fillna(<span class="dv">0</span>)</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>ratings_pivot.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="96">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">UserID</th>
+<th data-quarto-table-cell-role="th">1</th>
+<th data-quarto-table-cell-role="th">2</th>
+<th data-quarto-table-cell-role="th">3</th>
+<th data-quarto-table-cell-role="th">4</th>
+<th data-quarto-table-cell-role="th">5</th>
+<th data-quarto-table-cell-role="th">6</th>
+<th data-quarto-table-cell-role="th">7</th>
+<th data-quarto-table-cell-role="th">8</th>
+<th data-quarto-table-cell-role="th">9</th>
+<th data-quarto-table-cell-role="th">10</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">18</th>
+<th data-quarto-table-cell-role="th">19</th>
+<th data-quarto-table-cell-role="th">20</th>
+<th data-quarto-table-cell-role="th">21</th>
+<th data-quarto-table-cell-role="th">22</th>
+<th data-quarto-table-cell-role="th">23</th>
+<th data-quarto-table-cell-role="th">24</th>
+<th data-quarto-table-cell-role="th">25</th>
+<th data-quarto-table-cell-role="th">26</th>
+<th data-quarto-table-cell-role="th">27</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">GameID</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">1</td>
+<td>1.0</td>
+<td>5.0</td>
+<td>3.0</td>
+<td>0.0</td>
+<td>2.0</td>
+<td>5.0</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>0.0</td>
+<td>3.0</td>
+<td>...</td>
+<td>5.0</td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.0</td>
+<td>5.0</td>
+<td>4.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>3.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2</td>
+<td>5.0</td>
+<td>4.0</td>
+<td>0.0</td>
+<td>3.0</td>
+<td>4.0</td>
+<td>0.0</td>
+<td>4.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>5.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>4.0</td>
+<td>5.0</td>
+<td>3.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>3.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>5.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">3</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>3.0</td>
+<td>0.0</td>
+<td>5.0</td>
+<td>0.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>...</td>
+<td>4.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>3.0</td>
+<td>2.0</td>
+<td>3.0</td>
+<td>5.0</td>
+<td>2.0</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">4</td>
+<td>3.0</td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.0</td>
+<td>3.0</td>
+<td>5.0</td>
+<td>0.0</td>
+<td>2.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>4.0</td>
+<td>2.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>5.0</td>
+<td>4.0</td>
+<td>2.0</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">5</td>
+<td>0.0</td>
+<td>3.0</td>
+<td>2.0</td>
+<td>4.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>4.0</td>
+<td>2.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>4.0</td>
+<td>0.0</td>
+<td>5.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>4.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>2.0</td>
+<td>4.0</td>
+</tr>
+</tbody>
+</table>
+
+<p>5 rows × 27 columns</p>
+</div>
+</div>
+</div>
+<div id="cell-28" class="cell" data-execution_count="97">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Normalize the rating by adjusting it around the mean for a user.</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="co"># axis=1 means the operation should be performed on the columns.</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>ratings_norm <span class="op">=</span> ratings_pivot.<span class="bu">apply</span>(<span class="kw">lambda</span> x: x <span class="op">-</span> np.nanmean(x), axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>ratings_norm.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="97">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">UserID</th>
+<th data-quarto-table-cell-role="th">1</th>
+<th data-quarto-table-cell-role="th">2</th>
+<th data-quarto-table-cell-role="th">3</th>
+<th data-quarto-table-cell-role="th">4</th>
+<th data-quarto-table-cell-role="th">5</th>
+<th data-quarto-table-cell-role="th">6</th>
+<th data-quarto-table-cell-role="th">7</th>
+<th data-quarto-table-cell-role="th">8</th>
+<th data-quarto-table-cell-role="th">9</th>
+<th data-quarto-table-cell-role="th">10</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">18</th>
+<th data-quarto-table-cell-role="th">19</th>
+<th data-quarto-table-cell-role="th">20</th>
+<th data-quarto-table-cell-role="th">21</th>
+<th data-quarto-table-cell-role="th">22</th>
+<th data-quarto-table-cell-role="th">23</th>
+<th data-quarto-table-cell-role="th">24</th>
+<th data-quarto-table-cell-role="th">25</th>
+<th data-quarto-table-cell-role="th">26</th>
+<th data-quarto-table-cell-role="th">27</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">GameID</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">1</td>
+<td>-0.740741</td>
+<td>3.259259</td>
+<td>1.259259</td>
+<td>-1.740741</td>
+<td>0.259259</td>
+<td>3.259259</td>
+<td>-0.740741</td>
+<td>0.259259</td>
+<td>-1.740741</td>
+<td>1.259259</td>
+<td>...</td>
+<td>3.259259</td>
+<td>-1.740741</td>
+<td>0.259259</td>
+<td>-1.740741</td>
+<td>3.259259</td>
+<td>2.259259</td>
+<td>-0.740741</td>
+<td>-1.740741</td>
+<td>1.259259</td>
+<td>-1.740741</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2</td>
+<td>2.592593</td>
+<td>1.592593</td>
+<td>-2.407407</td>
+<td>0.592593</td>
+<td>1.592593</td>
+<td>-2.407407</td>
+<td>1.592593</td>
+<td>-1.407407</td>
+<td>-2.407407</td>
+<td>2.592593</td>
+<td>...</td>
+<td>-2.407407</td>
+<td>1.592593</td>
+<td>2.592593</td>
+<td>0.592593</td>
+<td>-2.407407</td>
+<td>-2.407407</td>
+<td>0.592593</td>
+<td>-2.407407</td>
+<td>-2.407407</td>
+<td>2.592593</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">3</td>
+<td>-1.592593</td>
+<td>-1.592593</td>
+<td>-0.592593</td>
+<td>-1.592593</td>
+<td>1.407407</td>
+<td>-1.592593</td>
+<td>3.407407</td>
+<td>-1.592593</td>
+<td>1.407407</td>
+<td>-0.592593</td>
+<td>...</td>
+<td>2.407407</td>
+<td>-1.592593</td>
+<td>-0.592593</td>
+<td>-1.592593</td>
+<td>-1.592593</td>
+<td>1.407407</td>
+<td>0.407407</td>
+<td>1.407407</td>
+<td>3.407407</td>
+<td>0.407407</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">4</td>
+<td>1.259259</td>
+<td>-1.740741</td>
+<td>0.259259</td>
+<td>-1.740741</td>
+<td>1.259259</td>
+<td>3.259259</td>
+<td>-1.740741</td>
+<td>0.259259</td>
+<td>-1.740741</td>
+<td>-0.740741</td>
+<td>...</td>
+<td>-1.740741</td>
+<td>0.259259</td>
+<td>-0.740741</td>
+<td>2.259259</td>
+<td>0.259259</td>
+<td>-1.740741</td>
+<td>-0.740741</td>
+<td>3.259259</td>
+<td>2.259259</td>
+<td>0.259259</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">5</td>
+<td>-1.740741</td>
+<td>1.259259</td>
+<td>0.259259</td>
+<td>2.259259</td>
+<td>-1.740741</td>
+<td>-0.740741</td>
+<td>0.259259</td>
+<td>2.259259</td>
+<td>0.259259</td>
+<td>-1.740741</td>
+<td>...</td>
+<td>2.259259</td>
+<td>-1.740741</td>
+<td>3.259259</td>
+<td>-1.740741</td>
+<td>-1.740741</td>
+<td>2.259259</td>
+<td>-1.740741</td>
+<td>-1.740741</td>
+<td>0.259259</td>
+<td>2.259259</td>
+</tr>
+</tbody>
+</table>
+
+<p>5 rows × 27 columns</p>
+</div>
+</div>
+</div>
+<div id="cell-29" class="cell" data-execution_count="98">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>item_sim_df <span class="op">=</span> pd.DataFrame(cosine_similarity(ratings_norm,ratings_norm),index<span class="op">=</span>ratings_norm.index,columns<span class="op">=</span>ratings_norm.index)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-30" class="cell" data-execution_count="99">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>item_sim_df.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="99">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th">GameID</th>
+<th data-quarto-table-cell-role="th">1</th>
+<th data-quarto-table-cell-role="th">2</th>
+<th data-quarto-table-cell-role="th">3</th>
+<th data-quarto-table-cell-role="th">4</th>
+<th data-quarto-table-cell-role="th">5</th>
+<th data-quarto-table-cell-role="th">6</th>
+<th data-quarto-table-cell-role="th">7</th>
+<th data-quarto-table-cell-role="th">8</th>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">GameID</th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">1</td>
+<td>1.000000</td>
+<td>-0.243442</td>
+<td>-0.074327</td>
+<td>-0.101845</td>
+<td>0.072004</td>
+<td>0.234278</td>
+<td>-0.036273</td>
+<td>-0.332424</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2</td>
+<td>-0.243442</td>
+<td>1.000000</td>
+<td>-0.223634</td>
+<td>-0.272126</td>
+<td>-0.138072</td>
+<td>-0.071492</td>
+<td>0.089981</td>
+<td>0.199555</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">3</td>
+<td>-0.074327</td>
+<td>-0.223634</td>
+<td>1.000000</td>
+<td>-0.074839</td>
+<td>0.139828</td>
+<td>-0.087104</td>
+<td>-0.069765</td>
+<td>0.103614</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">4</td>
+<td>-0.101845</td>
+<td>-0.272126</td>
+<td>-0.074839</td>
+<td>1.000000</td>
+<td>-0.379093</td>
+<td>-0.043893</td>
+<td>-0.192719</td>
+<td>-0.080452</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">5</td>
+<td>0.072004</td>
+<td>-0.138072</td>
+<td>0.139828</td>
+<td>-0.379093</td>
+<td>1.000000</td>
+<td>0.024564</td>
+<td>-0.142640</td>
+<td>-0.083416</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div id="cell-31" class="cell" data-execution_count="100">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>item_sim_df.shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="100">
+<pre><code>(8, 8)</code></pre>
+</div>
+</div>
+<div id="cell-32" class="cell" data-execution_count="101">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Given a game, find the similar games</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_similar_games(gameid):</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> gameid <span class="kw">not</span> <span class="kw">in</span> ratings_norm.index:</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>gameid<span class="sc">}</span><span class="ss"> item not available in ratings_norm.index"</span>)</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="va">None</span>, <span class="va">None</span></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">else</span>:</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>    sim_games <span class="op">=</span> item_sim_df.sort_values(by<span class="op">=</span>gameid, ascending<span class="op">=</span><span class="va">False</span>).index[<span class="dv">1</span>:]</span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>    sim_scores <span class="op">=</span> item_sim_df.sort_values(by<span class="op">=</span>gameid, ascending<span class="op">=</span><span class="va">False</span>).loc[:, gameid].tolist()[<span class="dv">1</span>:]</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sim_games, sim_scores</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-33" class="cell" data-execution_count="102">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="co"># What we would like to do</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>games, scores <span class="op">=</span> get_similar_games(<span class="dv">8</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="cell-34" class="cell" data-execution_count="103">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> x, y <span class="kw">in</span> <span class="bu">zip</span>(games, scores):</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="st">"</span><span class="sc">{}</span><span class="st"> with similarity of </span><span class="sc">{}</span><span class="st">"</span>.<span class="bu">format</span>(x,y))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>7 with similarity of 0.21592724477570088
+2 with similarity of 0.1995550367869258
+3 with similarity of 0.1036142251373073
+6 with similarity of -0.024626278791953508
+4 with similarity of -0.08045246286742387
+5 with similarity of -0.0834161873957046
+1 with similarity of -0.33242358705791364</code></pre>
+</div>
+</div>
+<div id="cell-35" class="cell" data-execution_count="104">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Join user_df with ratings_pivot to include UserID and User columns</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>ratings_pivot_with_user <span class="op">=</span> ratings_pivot.T.join(user_df.set_index(<span class="st">'UserID'</span>)).T</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the new users to predict for</span></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>new_users <span class="op">=</span> [<span class="dv">26</span>, <span class="dv">27</span>]</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the predictions dictionary to store predictions for each user</span></span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> user <span class="kw">in</span> new_users:</span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Fetch the ratings for the current user</span></span>
+<span id="cb44-10"><a href="#cb44-10" aria-hidden="true" tabindex="-1"></a>    user_ratings <span class="op">=</span> ratings_pivot[user]  <span class="co"># This is the user ratings from the ratings pivot table</span></span>
+<span id="cb44-11"><a href="#cb44-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-12"><a href="#cb44-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Find the games that the user has not rated yet</span></span>
+<span id="cb44-13"><a href="#cb44-13" aria-hidden="true" tabindex="-1"></a>    unrated_games <span class="op">=</span> user_ratings[user_ratings <span class="op">==</span> <span class="dv">0</span>].index</span>
+<span id="cb44-14"><a href="#cb44-14" aria-hidden="true" tabindex="-1"></a>    predictions <span class="op">=</span> {}</span>
+<span id="cb44-15"><a href="#cb44-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-16"><a href="#cb44-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Iterate through each unrated game</span></span>
+<span id="cb44-17"><a href="#cb44-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> game <span class="kw">in</span> unrated_games:</span>
+<span id="cb44-18"><a href="#cb44-18" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Get similar games for the current game</span></span>
+<span id="cb44-19"><a href="#cb44-19" aria-hidden="true" tabindex="-1"></a>        similar_games, similar_scores <span class="op">=</span> get_similar_games(game)</span>
+<span id="cb44-20"><a href="#cb44-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-21"><a href="#cb44-21" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Identify the games that the user has rated</span></span>
+<span id="cb44-22"><a href="#cb44-22" aria-hidden="true" tabindex="-1"></a>        user_rated_games <span class="op">=</span> user_ratings[user_ratings <span class="op">&gt;</span> <span class="dv">0</span>].index</span>
+<span id="cb44-23"><a href="#cb44-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-24"><a href="#cb44-24" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Filter the similarity scores to include only those for the games the user has rated</span></span>
+<span id="cb44-25"><a href="#cb44-25" aria-hidden="true" tabindex="-1"></a>        sim_scores <span class="op">=</span> [score <span class="cf">for</span> gm, score <span class="kw">in</span> <span class="bu">zip</span>(similar_games, similar_scores) <span class="cf">if</span> gm <span class="kw">in</span> user_rated_games]</span>
+<span id="cb44-26"><a href="#cb44-26" aria-hidden="true" tabindex="-1"></a>        rated_scores <span class="op">=</span> user_ratings[user_rated_games].values</span>
+<span id="cb44-27"><a href="#cb44-27" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb44-28"><a href="#cb44-28" aria-hidden="true" tabindex="-1"></a>        <span class="co"># If the user has rated similar games, compute the predicted rating</span></span>
+<span id="cb44-29"><a href="#cb44-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">sum</span>(sim_scores) <span class="op">!=</span> <span class="dv">0</span>:</span>
+<span id="cb44-30"><a href="#cb44-30" aria-hidden="true" tabindex="-1"></a>            predicted_rating <span class="op">=</span> np.dot(sim_scores, rated_scores) <span class="op">/</span> <span class="bu">sum</span>(sim_scores)</span>
+<span id="cb44-31"><a href="#cb44-31" aria-hidden="true" tabindex="-1"></a>            predictions[game] <span class="op">=</span> predicted_rating</span>
+<span id="cb44-32"><a href="#cb44-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-33"><a href="#cb44-33" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sort predictions by predicted ratings in descending order</span></span>
+<span id="cb44-34"><a href="#cb44-34" aria-hidden="true" tabindex="-1"></a>    sorted_predictions <span class="op">=</span> <span class="bu">sorted</span>(predictions.items(), key<span class="op">=</span><span class="kw">lambda</span> x: x[<span class="dv">1</span>], reverse<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb44-35"><a href="#cb44-35" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb44-36"><a href="#cb44-36" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Output the predicted ratings for the current user</span></span>
+<span id="cb44-37"><a href="#cb44-37" aria-hidden="true" tabindex="-1"></a>    user_name <span class="op">=</span> user_df[user_df[<span class="st">'UserID'</span>] <span class="op">==</span> user][<span class="st">'User'</span>].values[<span class="dv">0</span>]</span>
+<span id="cb44-38"><a href="#cb44-38" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Predicted ratings for </span><span class="sc">{</span>user_name<span class="sc">}</span><span class="ss">:"</span>)</span>
+<span id="cb44-39"><a href="#cb44-39" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> game, rating <span class="kw">in</span> sorted_predictions:</span>
+<span id="cb44-40"><a href="#cb44-40" aria-hidden="true" tabindex="-1"></a>        game_name <span class="op">=</span> game_df[game_df[<span class="st">'GameID'</span>] <span class="op">==</span> game][<span class="st">'Game'</span>].values[<span class="dv">0</span>]</span>
+<span id="cb44-41"><a href="#cb44-41" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>game_name<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>rating<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
+<span id="cb44-42"><a href="#cb44-42" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Predicted ratings for NU1:
+Super Smash Bros: 4.15
+Fortnite: 3.80
+
+Predicted ratings for NU2:
+Mortal Kombat 11: 2.33
+Minecraft: 2.11
+</code></pre>
+</div>
+</div>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

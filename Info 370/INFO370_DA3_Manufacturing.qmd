@@ -1,0 +1,364 @@
+---
+title: "INFO370 Data Assignment 3: Modeling Manufacturing"
+author: "Swastik Singh"
+date: today
+format:
+  html:
+    embed-resources: true
+---
+
+# Analysis Overview
+
+In this assignment, you'll conduct three analyses: a descriptive, a causal, and a predictive analysis. Each one will involve linear models. In the three analyses, you will consider data from a (fictitious) manufacturing company. The company has a couple hundred manufacturing sites. At each site, a manufacturing team works with a robot to produce "units" of a mysterious product. You will conduct analyses to compare the productivity (in terms of the number of units produced) at different kinds of sites, to estimate how much an upgrade to the robot control system improves productivity, and to try and predict how productive specific manufacturing sites.
+
+## Exercise Notes
+
+For this assignment, you'll probably need to use `fct_relevel()`, `lm()`, `confint()`, and `predict()`. You don't need to use `lad()` or the `infer` library or its tools like `generate()`.
+
+Anytime there is code in comments, uncomment it before rendereding your document.
+
+## Company Notes
+
+In the manufacturing process, various components are brought to a robot, the robot then combines the components into a finished part, and the parts are then combined into a completed unit, packaged and removed by the manufacturing team to be shipped off. The number of completed units are recorded at the end of every work day.
+
+Some of the robots in the company have been upgraded to use a new version of its control system. The new version of the robot control system should double its working speed -- measured in terms of parts that it can complete in one minute.
+
+Manufacturing teams are involved in both choosing designs and upgrades for their robot and for designing the tools and processes used to bring raw materials to the robots and to package the completed products. Good manufacturing teams have ways to improve the number of units produced regardless of what robot design they are using.
+
+The supervisors in the various manufacturing units are not hired based on technical expertise, and whether or not they are knowledgeable in the technical issues involved in manufacturing is not tied to the technical skills of the manufacturing team. Supervisors tend to be happy when the manufacturing team produces more units and when they try out innovative techniques -- and evaluate projects and teams based on those criteria.
+
+## Set up environment
+
+Get required libraries.
+
+```{r}
+library(tidyverse)
+```
+## Get Data
+
+For this assignment, you'll be looking at synthesized (fake) data. To create synthesized data, you'll need to run a function to simulate a manufacturing company. The following function will be used to create data. You'll just need to run `rules_of_the_universe()` to get a data frame. Because the data is synthetic, we can actually *know* the real relationships between the variables. Among other things, the upgraded control system design actually *does* increase the number of units produced at manufacturing sites by 30 units on average.
+
+```{r}
+#| echo: false
+rules_of_the_universe <- function(n, ate){
+  # 40% of manufacturing teams are "highly skilled"
+  tech_skill <- rbinom(n, 1, 0.4)
+  # Chance of using the new design is 70% for high-skill teams, 40% otherwise
+  design <- rbinom(n, 1, case_when(tech_skill == 1 ~ .7, TRUE ~ .4))
+  # Speed depends on the model used
+  speed <- round(rnorm(n, mean =  ate * (1 + design), sd = 2))
+  # Units produced depends on speed and technical skills
+  units_produced <- round(rnorm(n, mean = (speed + tech_skill * 30), sd = 10))
+  # Supervisor evals depend on the # of units and the innovation involved
+  evals <- round(rnorm(n, mean = 1 + units_produced/40 + design*2, sd = 0.01))
+  evals <- case_when( (evals > 10) ~ 10,
+                      (evals < 1) ~ 1,
+                      TRUE ~ evals)
+  # Change Factors
+  tech_skill <- factor(case_when(tech_skill == 1 ~ "high_skill",
+                          TRUE ~ "low_skill"))
+  design <- factor(case_when(design == 1 ~ "new",
+                          TRUE ~ "original"))
+  mfg_dat <- data.frame(
+    units_produced, design, tech_skill, speed, evals
+  )
+  return(mfg_dat) 
+  }
+```
+
+Whenever you run `rules_of_the_universe()`, you get a new data frame. Each data frame is created randomly, but based off the same rules of the universe. In this case, you are looking at data that represents a sample of 34 manufacturing sites from a large company. The company actually has something like 200 manufacturing sites, so we are looking at a sample.
+
+```{r}
+set.seed(100) # Set the randomization so everyone gets the same data
+mfg_dat <- rules_of_the_universe(34, 30)
+mfg_dat |> glimpse()
+```
+The variables represent measurements taken in one representative day of manufacturing from each site. The variables represent:
+
+*  `units_produced`: The number of products produced at a manufacturing site in the day measured
+*  `design`: Whether a manufacturing site uses a new, upgraded version of the control system for their manufacturing robot, or they use an older, original version of the control system
+*  `tech_skill`: Whether or not the team that maintains, operates, and ugrades the manufacturing robot at each site could be considered on the more skilled (high_skill) or less skilled (low_skill) half of all technical teams
+*   `speed`: The typical number of parts per minute that the manufacturing robot at a site puts together (note: multiple parts are used in each unit produced at the manufacturing sites)
+*   `evals`: Each manufacturing site gets an annual performance evaluation from a manager on a scale from 1 (not doing well at all) to 10 (an excellently run site)
+
+# Analysis 1: Description
+
+In this first analysis, your job is to determine if sites that use the new control system design tend to produce more units than sites that use the original control system design, and if so, by how much? This is a simple descriptive task, though since the data set only includes a sample of all manufacturing sites, you do need to use statistical inference. In this case, we can consider means or least squares when building descriptions, because the company is more concerned with the total number of units produced per site than in evaluating what is happening at "most" or "typical" sites.
+
+## Exercise 1 (.3 pts): Visualize the Group Differences
+
+Create a visualization that gives you a sense of the difference in average production for sites with the new and old design -- and also gives you a sense of how much overlap there is in production between the two groups. There are many ways to do this, but make sure that there are labels.
+
+```{r}
+mfg_dat |>
+  ggplot(aes(x = design, y = units_produced)) +
+  geom_violin(trim = FALSE) +
+  labs(
+    title = "Average Production by Design",
+    y = "Units Produced",
+    x = "Design"
+  ) +
+  stat_summary(fun = mean, geom = "point", color = "blue", size = 2) +
+  theme_minimal()
+```
+
+```{r}
+summary_stats <- mfg_dat |>
+  group_by(design) |>
+  summarise(mean_units = mean(units_produced))
+
+# alternative visualization!
+mfg_dat |>
+  ggplot(aes(x = units_produced), fill = design) +
+  geom_histogram(binwidth = 7) +
+  facet_wrap(~design, ncol = 1) +
+  geom_vline(data = summary_stats, aes(xintercept = mean_units), color = "blue") +
+  labs(
+    title = "Average Production by Design",
+    y = "Units Produced",
+    x = "Design"
+  ) +
+  theme_minimal()
+
+```
+
+## Building a Model
+
+To answer this question, you could calculate a difference in means and create a 95% confidence interval for that directly. However, you can also use a linear model to inspect the difference in the two groups. Use that approach here.
+
+In this analysis, you specifically want to see how much *more* sites with the new robot control system produce on average than the control sites. You'll want to make sure that our analysis uses the "original" design as the default or reference. To do that, check the levels of `design`.
+
+Check the order of levels.
+
+```{r}
+levels(mfg_dat$design)
+```
+## Exercise 2 (.3 pts): Change the default level
+
+Make sure that `design` variable encodes the idea that the original design is the "default" or "reference" level. Transform the variable and save the original data frame.
+
+```{r}
+mfg_dat <- mfg_dat |> mutate(design = fct_relevel(design, "original"))
+levels(mfg_dat$design)
+```
+## Exercise 3 (.3 pts): Model for the Simple Difference
+
+Fit a linear model using least squares that would display a parameter that lets you estimate the how much greater the average units produced is for the sites with new design compared to the old design. Save the model as model_simple.
+
+```{r}
+model_simple <- lm(units_produced ~ design, data = mfg_dat)
+model_simple
+```
+## Exercise 4 (.3 pts): Calculate confidence intervals
+
+Calculate and display confidence intervals for the model parameters in model_simple.
+
+```{r}
+confint(model_simple)
+```
+## Exercise 5 (.3 pts): Interpret confidence intervals
+
+Check the confidence intervals you created above and determine which of the following interpretations is appropriate given the meaning of the parameters in this analysis and standard interpretation of 95% confidence intervals.
+
+Delete all the incorrect interpretations in the list below, leaving only correct interpretations (there may be 1 or more than one).
+
+*  **D: We can be confident that the average number of units produced at sites with the old design is between 18.6 and 40.3.**
+
+## Exercise 6 (.3 pts): Interpret confidence intervals
+
+Delete all the incorrect interpretations in the list below, leaving only correct interpretations (there may be 1 or more than one).
+
+*  **A: Sites that use the new design might plausibly produce an average of 57 more units than those with the old design.**
+*  **B: We can be confident that implementing the new design at manufacturing sites would improve average unit production by as much as 57.8 units and at least 31.5 units.**
+*  **C: We can be confident that sites that use the newer design produce more units on average than sites that use the original design.**
+
+
+# Analysis 2: Causal Analysis
+
+In the first analysis, you evaluated the difference in production between sites that use the new or old design. This might be useful in deciding which of the sites across the entire company might need extra help in keeping production up or to simply report which general groups are more productive. However, if you want to decide how much production improves based on upgrading the control system, we will need to use a more sophisticated analysis. In Analysis 2, you should estimate how much upgrading the control system improves production on average. In other words, you should do your best to estimate the average treatment effect of the design upgrade on units produced.
+
+## Exercise 7 (.6 pts): Draw a causal graph
+
+In this case, you do not have access to experimental data. As such, you will need to reason about how causality might work in the production system. One way to do that is to draw a directed acyclic graph that represents your beliefs about the causal system. Consider the variables `units produced`, `technical skill of the team`, `machine speed`, and `supervisor evaluation` and draw a DAG that represents how these variables may be related. For this analysis, don't worry about variables that were not recorded, though of course there may be other important ones in real practice (like maintenance time and costs, available raw materials, and seasonal effects among others). Make sure that your graph satisfies the requirements of a DAG (no cycles or feedback).
+
+If you're unsure about plausible causal relationships for these models, check the accompanying notes about the company!
+
+```{mermaid}
+graph LR
+  A[design] --> B[machine speed]
+  B --> C[units produced]
+  A --> C
+  D[technical skill of the team] --> A
+  D --> C
+  A --> E[supervisor evaluation]
+  B --> E
+  C --> E
+
+```
+
+## Exercise 8 (.3 pts): Identify Variables
+
+For each of the following types of variables, list any that you can identify from your DAG (or from reasoning about our variables). Make sure that you include all the recorded variables in our data set.
+
+*  Treatment: design
+*  Outcome: units produced
+*  Confounder: technical skill of the team
+*  Collider: supervisor evaluation
+*  Mediator: machine speed
+
+## Exercise 9 (.3 pts): Fit Models
+
+Fit the model that lets you do the best job at estimating the average treatment effect of design update on units produced given the data that you have available.
+
+```{r}
+model_causal <- lm(formula = units_produced ~ design + tech_skill, data = mfg_dat)
+model_causal
+```
+
+## Exercise 10 (.3 pts): Check Confidence Intervals
+
+Calculate confidence intervals for model_causal.
+
+```{r}
+confint(model_causal)
+```
+## Exercise 11 (.3 pts): Interpret Confidence Intervals
+
+Based on the confidence intervals above and assuming that you have a good grasp of the causal system (the DAG represents how the variables are related), which of the following can you conclude? Delete the incorrect interpretations, and leave only interpretations that are appropriate (there may be 1 or more than one). 
+
+*  **A: It is plausible that the average treatment effect (ATE) of upgrading the design on production is an increase of 30 units.**
+*  **E: We can be confident that upgrading the system at manufacturing sites would improve their production on average.**
+
+## Exercise 12 (.3 pts): Check alternative models
+
+The data here was synthetic, and created based on `rules_of_the_universe()`. Because of this, we can actually *know* what the true average treatment effect is. Based on `rules_of_the_universe()`, the average causal effect of the design upgrade on production is 30 units.
+
+The best model for causal inference is usually neither one were the only predictor is the treatment variable nor one were all possible variables are included as predictors. To get a sense of what can happen if you include inappropriate variables in your model, create a new linear model that includes all possible predictor variables. Call that model `model_full` and display the *point estimates* (just the parameter values, not the confidence intervals) for the parameters.
+
+```{r}
+model_full <- lm(units_produced ~ ., data = mfg_dat)
+model_full 
+```
+Have a look at the estimates above. The average treatment effect should be the slope for design. No need to write anything here, but see how this estimate is **very** different from the true value (+30)! Including *too many* control variables is sometimes as bad or worse than not including control variables at all.
+
+# Analysis 3: Prediction
+
+We can use linear models to describe patterns, to estimate causal effects, and also to make predictions for future data. In this context, you could consider using the models that you created to create guesses at the level of productivity in *new* manufacturing sites. First, consider using one of these models to predict the level of productivity at a single new manufacturing site where you haven't yet measured productivity.
+
+Have a look at your causal model.
+
+```{r}
+model_causal
+```
+## Exercise 13 (.3 pts): Make a Single Prediction
+
+Using *this* model, make the best prediction that you can for the number of units that would be produced at a new site which has a low-skilled technical team, uses the original control system design, has a machine that runs at 65, and where the managing supervisor has given an evaluation of 4.
+
+To make this prediction, do the math manually (do not use `predict()`).
+
+```{r}
+predicted_units <- model_causal$coefficients[1] + model_causal$coefficients[3]
+predicted_units
+```
+
+This is the best guess you could make using this model -- but of course, you have different models that you fit. We might want to consider how well different models might perform for prediction.
+
+## Making Many Predictions
+
+Usually when we create a predictive model, we want to use it to make accurate predictions for many new individuals. For instance, we could imagine that our company is going to acquire another company that uses the same kind of equipment and has similarly trained technical teams. In this case, let's imagine that we have access to lots of information about each of the manufacturing sites in the new company, but we don't immediately have access to the actual number of units produced at each of those units. We could use the predictive model to make a guess at the level of productivity at each site. You will do this, and then go back and compare the predictions made using different models to the *true* measured amount of productivity at each site to see which model had the closest predictions.
+
+Here, we'll create a new data frame that represents the new company and what we know about all of its manufacturing units (`mfg_new_dat`). There is also another data frame that includes the true levels of productivity at each manufacturing site that you can use a little later (`true_units`).
+
+```{r}
+set.seed(999)
+mfg_new_dat <- rules_of_the_universe(50, 30)
+true_units <- mfg_new_dat |> select(units_produced)
+mfg_new_dat <- mfg_new_dat |> select(-units_produced)
+mfg_new_dat |> glimpse()
+```
+
+## Exercise 14 (.3 pts): Make Many Predictions
+
+Using the causal model, make predictions for each manufacturing site at the new company. Save these predictions in the `mfg_new_dat` data frame using the variable name `causal_prediction`.
+
+```{r}
+mfg_new_dat <- mfg_new_dat |>
+  mutate(causal_prediction = predict(model_causal, newdata = mfg_new_dat))
+mfg_new_dat |>  sample_n(10)
+```
+## Exercise 15 (.3 pts): Make Predictions with Different Models
+
+Now, make predictions using two more models:`model_full` and `model_simple`. Save these predictions in the same data frame using the names `full_prediction` and `simple_prediction`.
+
+```{r}
+mfg_new_dat <- mfg_new_dat |>
+  mutate(full_prediction = predict(model_full, newdata = mfg_new_dat),
+         simple_prediction = predict(model_simple, newdata = mfg_new_dat))
+mfg_new_dat |>  sample_n(10)
+```
+Note that the simple predictions are similar for many sites! This makes sense, since model_simple used *only* the design as a predictor! The simple model "sees" any site that uses the new design as the same as any other. The full model used all available predictors, so it'll have different predictions any time there are differences in any of the site characteristics.
+
+## Comparing Model Predictions
+
+Each model will have produced different predictions for the level of productivity at the different sites. There are many ways that you could try to choose which model is the most appropriate to use to make predictions, but in this case, you'll check which model actually made the best overall predictions. To do this, you can compare the predictions to the true number of units produced at each site.
+
+To more easily work with the different predictions, this code will transform the data frame of predictions and add the true values for units produced at each site. The new data frame will have a different row for each prediction made by each model. `model` indicates which model was used to make the prediction and `predicted_units` is the prediction that model made for the individual site.
+
+```{r}
+predict_mfg_new_dat <- mfg_new_dat |>
+  mutate(units_produced = true_units$units_produced) |>
+  pivot_longer(cols = c(full_prediction, causal_prediction, simple_prediction),
+                        names_to = "model",
+                        values_to = "predicted_units")
+predict_mfg_new_dat
+```
+## Exercise 16 (.3 pts): Calculate Residuals
+
+Calculate how far each prediction was from the true number of units produced. Save this value for each individual prediction in the same `predict_mfg_new_dat` data frame in a new column called `residual`. The residuals should be the simple difference between the number of units actually produced and the number of units that was predicted.
+
+```{r}
+predict_mfg_new_dat <- predict_mfg_new_dat |>
+  mutate(residual = abs(units_produced - predicted_units))
+
+predict_mfg_new_dat |> sample_n(10)
+```
+## Exercise 17 (.3 pts): Visualize Residuals
+
+Create some kind of visualization that would let you compare the errors (the residuals) made by each of your models. There are different ways to do this, but your visualization should let you see the spread in residuals for each model separately and identify informally which model might have the smallest residuals in general.
+
+```{r}
+predict_mfg_new_dat |>
+  ggplot(aes(x = model, y = residual)) +
+  geom_boxplot() +
+  labs(
+    title = "Residuals by Model",
+    y = "Residuals",
+    x = "Model"
+  ) +
+  theme_minimal()
+
+```
+## Exercise 18 (.3 pts): Calculate MSE
+
+One way that we can compare models that make predictions of the same data is by comparing the mean squared error (MSE) for each model. The mean squared error is the same value that least squares regression tries to minimize -- it is the average of the squared residuals. We can ask: Which model lets us minimize that value the most?
+
+In the code below, calculate the mean square error for all the predictions made by each model separately. Output a data frame that includes a row for each model and a column called MSE that shows the MSE value for that model. 
+
+```{r}
+model_mse <- predict_mfg_new_dat |>
+  group_by(model) |>
+  summarise(MSE = mean(residual^2))
+model_mse
+```
+
+## Exercise 19 (.3 pts): Closest Predictions
+
+Consider the MSE scores above. Which model produced the closest predictions on average? Delete the incorrect answers.
+
+*  **The full model, with multiple predictors**
+
+# That's all!
+
+Linear models (and most models) *can* be used for description, causal, and predictive analyses. However, the exact specification of the model will usually need to be different for these different kinds of goals. For description, our model needs to match the exact question being asked. For causal analysis, the model needs to take into account our understanding of the causal system. For prediction, we will often include as many variables as needed to improve our predictive power (though this isn't *always* going to be using the full set of variables).
+
+Render this document as an html file and submit!
